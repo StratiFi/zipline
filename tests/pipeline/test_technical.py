@@ -197,8 +197,8 @@ class TestFastStochasticOscillator(WithTechnicalFactor, ZiplineTestCase):
         fso = FastStochasticOscillator()
 
         today = pd.Timestamp('2015')
-        assets = np.arange(3, dtype=np.float)
-        out = np.empty(shape=(3,), dtype=np.float)
+        assets = np.arange(3, dtype=np.float64)
+        out = np.empty(shape=(3,), dtype=np.float64)
 
         highs = np.full((50, 3), 3)
         lows = np.full((50, 3), 2)
