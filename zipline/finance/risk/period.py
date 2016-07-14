@@ -95,11 +95,11 @@ class RiskMetricsPeriod(object):
             raise Exception(message)
 
         self.num_trading_days = len(self.benchmark_returns)
-        self.trading_day_counts = pd.stats.moments.rolling_count(
-            self.algorithm_returns, self.num_trading_days)
 
-        self.mean_algorithm_returns = \
-            self.algorithm_returns.cumsum() / self.trading_day_counts
+        self.mean_algorithm_returns = (
+            self.algorithm_returns.cumsum() /
+            np.arange(1, self.num_trading_days + 1, dtype=np.float64)
+        )
 
         self.benchmark_volatility = self.calculate_volatility(
             self.benchmark_returns)
