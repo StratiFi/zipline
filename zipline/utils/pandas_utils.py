@@ -96,3 +96,17 @@ def mask_between_time(dts, start, end, include_start=True, include_end=True):
         left_op(start_micros, time_micros),
         right_op(time_micros, end_micros),
     )
+
+
+def timedelta_to_integral_seconds(delta):
+    """
+    Convert a pd.Timedelta to a number of seconds as an int.
+    """
+    return int(delta.total_seconds())
+
+
+def timedelta_to_integral_minutes(delta):
+    """
+    Convert a pd.Timedelta to a number of minutes as an int.
+    """
+    return timedelta_to_integral_seconds(delta) // 60

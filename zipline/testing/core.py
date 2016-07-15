@@ -48,6 +48,7 @@ from zipline.pipeline.factors import CustomFactor
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.utils import security_list
 from zipline.utils.input_validation import expect_dimensions
+from zipline.utils.pandas_utils import timedelta_to_integral_seconds
 from zipline.utils.sentinel import sentinel
 from zipline.utils.calendars import get_calendar
 import numpy as np
@@ -76,7 +77,7 @@ def str_to_seconds(s):
     >>> str_to_seconds('2014-01-01')
     1388534400
     """
-    return int((pd.Timestamp(s, tz='UTC') - EPOCH).total_seconds())
+    return timedelta_to_integral_seconds(pd.Timestamp(s, tz='UTC') - EPOCH)
 
 
 def drain_zipline(test, zipline):

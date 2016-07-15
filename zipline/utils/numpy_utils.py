@@ -15,6 +15,7 @@ from numpy import (
     dtype,
     empty,
     nan,
+    timedelta64,
     vectorize,
     where
 )
