@@ -207,7 +207,7 @@ class TestFastStochasticOscillator(WithTechnicalFactor, ZiplineTestCase):
         fso.compute(today, assets, out, closes, lows, highs)
 
         # Expected %K
-        assert_equal(out, np.full((3,), 200))
+        assert_equal(out, np.full((3,), 200, dtype=np.float64))
 
     def test_fso_expected_with_talib(self):
         """
