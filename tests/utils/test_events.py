@@ -22,6 +22,7 @@ from nose_parameterized import parameterized
 import pandas as pd
 from six import iteritems
 from six.moves import range, map
+from toolz import concat
 
 from zipline.testing import subtest, parameter_space
 import zipline.utils.events
@@ -421,26 +422,26 @@ class TestStatelessRules(RuleTestCase):
             rule = NthTradingDayOfWeek
             # Expect to trigger on the first trading day of the week, plus the
             # offset
-            trigger_periods = [
+            trigger_sessions = [
                 pd.Timestamp('2014-01-06', tz='UTC'),
                 pd.Timestamp('2014-01-13', tz='UTC'),
                 pd.Timestamp('2014-01-21', tz='UTC'),
                 pd.Timestamp('2014-01-27', tz='UTC'),
             ]
-            trigger_periods = \
-                [x + timedelta(days=rule_offset) for x in trigger_periods]
+            trigger_sessions = \
+                [x + timedelta(days=rule_offset) for x in trigger_sessions]
         else:
             rule = NDaysBeforeLastTradingDayOfWeek
             # Expect to trigger on the last trading day of the week, minus the
             # offset
-            trigger_periods = [
+            trigger_sessions = [
                 pd.Timestamp('2014-01-10', tz='UTC'),
                 pd.Timestamp('2014-01-17', tz='UTC'),
                 pd.Timestamp('2014-01-24', tz='UTC'),
                 pd.Timestamp('2014-01-31', tz='UTC'),
             ]
-            trigger_periods = \
-                [x - timedelta(days=rule_offset) for x in trigger_periods]
+            trigger_sessions = \
+                [x - timedelta(days=rule_offset) for x in trigger_sessions]
 
         rule.cal = self.nyse_cal
         should_trigger = rule(rule_offset).should_trigger
@@ -448,15 +449,16 @@ class TestStatelessRules(RuleTestCase):
         # If offset is 4, there is not enough trading days in the short week,
         # and so it should not trigger
         if rule_offset == 4:
-            del trigger_periods[2]
+            del trigger_sessions[2]
 
         # Filter out trigger dates that happen before the simulation starts
-        trigger_periods = [x for x in trigger_periods if x >= sim_start]
+        trigger_sessions = [x for x in trigger_sessions if x >= sim_start]
 
-        # Get all the minutes on the trigger dates
-        trigger_minutes = self.nyse_cal.minutes_for_session(trigger_periods[0])
-        for period in trigger_periods[1:]:
-            trigger_minutes += self.nyse_cal.minutes_for_session(period)
+        trigger_minutes = [
+            minute
+            for session in trigger_sessions
+            for minute in self.nyse_cal.minutes_for_session(session)
+        ]
 
         expected_n_triggered = len(trigger_minutes)
         trigger_minutes_iter = iter(trigger_minutes)
