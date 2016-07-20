@@ -637,8 +637,14 @@ class WithEquityDailyBarData(WithTradingEnvironment):
             asset_df = asset_df[slicer]
             minutes = mm[mm.slice_indexer(start=first_minute,
                                           end=last_minute)]
-            asset_df = asset_df.reindex(minutes)
-            yield asset.sid, asset_df.resample('1d', how=ohclv_how).dropna()
+            asset_df = (
+                asset_df
+                .reindex(minutes)
+                .groupby(pd.TimeGrouper('1d'))
+                .agg(ohclv_how)
+                .dropna()
+            )
+            yield asset.sid, asset_df
 
     @classmethod
     def make_equity_daily_bar_data(cls):
