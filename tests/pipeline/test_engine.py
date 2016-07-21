@@ -25,12 +25,8 @@ from pandas import (
     Categorical,
     DataFrame,
     date_range,
-    ewma,
-    ewmstd,
     Int64Index,
     MultiIndex,
-    rolling_apply,
-    rolling_mean,
     Series,
     Timestamp,
 )
@@ -82,6 +78,12 @@ from zipline.testing.fixtures import (
 )
 from zipline.utils.memoize import lazyval
 from zipline.utils.numpy_utils import bool_dtype
+from zipline.utils.pandas_utils import (
+    ewma,
+    ewmstd,
+    rolling_apply,
+    rolling_mean,
+)
 
 
 class RollingSumDifference(CustomFactor):
@@ -960,14 +962,16 @@ class SyntheticBcolzTestCase(WithAdjustmentReader,
         # computed results to be computed using values anchored on the
         # **previous** day's data.
         expected_raw = rolling_mean(
-            expected_bar_values_2d(
-                dates - self.trading_calendar.day,
-                self.equity_info,
-                'close',
+            DataFrame(
+                expected_bar_values_2d(
+                    dates - self.trading_calendar.day,
+                    self.equity_info,
+                    'close',
+                ),
             ),
             window_length,
             min_periods=1,
-        )
+        ).values
 
         expected = DataFrame(
             # Truncate off the extra rows needed to compute the SMAs.
@@ -1073,19 +1077,29 @@ class ParameterizedFactorTestCase(WithTradingEnvironment, ZiplineTestCase):
     def expected_ewma(self, window_length, decay_rate):
         alpha = 1 - decay_rate
         span = (2 / alpha) - 1
+
+        # XXX: This is a comically inefficient way to compute a windowed EWMA.
+        # Don't use it outside of testing.  We're using rolling-apply of an
+        # ewma (which is itself a rolling-window function) because we only want
+        # to look at ``window_length`` rows at a time.
         return rolling_apply(
             self.raw_data,
             window_length,
-            lambda window: ewma(window, span=span)[-1],
+            lambda window: ewma(DataFrame(window), span=span).values[-1],
         )[window_length:]
 
     def expected_ewmstd(self, window_length, decay_rate):
         alpha = 1 - decay_rate
         span = (2 / alpha) - 1
+
+        # XXX: This is a comically inefficient way to compute a windowed EWMSTD.
+        # Don't use it outside of testing.  We're using rolling-apply of an
+        # ewma (which is itself a rolling-window function) because we only want
+        # to look at ``window_length`` rows at a time.
         return rolling_apply(
             self.raw_data,
             window_length,
-            lambda window: ewmstd(window, span=span)[-1],
+            lambda window: ewmstd(DataFrame(window), span=span).values[-1],
         )[window_length:]
 
     @parameterized.expand([
