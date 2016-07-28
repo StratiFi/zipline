@@ -22,7 +22,6 @@ from nose_parameterized import parameterized
 import pandas as pd
 from six import iteritems
 from six.moves import range, map
-from toolz import concat
 
 from zipline.testing import subtest, parameter_space
 import zipline.utils.events
