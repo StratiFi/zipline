@@ -29,8 +29,11 @@ from zipline.assets.asset_db_schema import (
     equities as equities_table,
     equity_symbol_mappings,
     futures_contracts as futures_contracts_table,
+    options_contracts as options_contracts_table,
     futures_exchanges,
+    options_exchanges,
     futures_root_symbols,
+    options_root_symbols,
     metadata,
     version_info,
 )
@@ -43,6 +46,7 @@ AssetData = namedtuple(
         'equities',
         'equities_mappings',
         'futures',
+        'options',
         'exchanges',
         'root_symbols',
     ),
@@ -85,6 +89,24 @@ _futures_defaults = {
     'auto_close_date': None,
     'tick_size': None,
     'multiplier': 1,
+}
+
+# Default values for the options DataFrame
+_options_defaults = {
+    'symbol': None,
+    'root_symbol': None,
+    'asset_name': None,
+    'start_date': 0,
+    'end_date': 2 ** 62 - 1,
+    'first_traded': None,
+    'exchange': None,
+    'notice_date': None,
+    'expiration_date': None,
+    'auto_close_date': None,
+    'tick_size': None,
+    'multiplier': 1,
+    'strike':0,
+    'option_type':None,
 }
 
 # Default values for the exchanges DataFrame
@@ -352,6 +374,7 @@ class AssetDBWriter(object):
     def write(self,
               equities=None,
               futures=None,
+              options=None,
               exchanges=None,
               root_symbols=None,
               chunk_size=DEFAULT_CHUNK_SIZE):
@@ -409,6 +432,42 @@ class AssetDBWriter(object):
               multiplier: float
                   The amount of the underlying asset represented by this
                   contract.
+            The index of this dataframe should contain the sids.
+        options : pd.Dataframe, optional
+            The option contract metadata. The columns for this dataframe are:
+
+              symbol : str
+                  The ticker symbol for this options contract.
+              root_symbol : str
+                  The root symbol, or the symbol with the expiration stripped
+                  out.
+              asset_name : str
+                  The full name for this asset.
+              start_date : datetime, optional
+                  The date when this asset was created.
+              end_date : datetime, optional
+                  The last date we have trade data for this asset.
+              first_traded : datetime, optional
+                  The first date we have trade data for this asset.
+              exchange : str, optional
+                  The exchange where this asset is traded.
+              notice_date : datetime
+                  The date when the owner of the contract may be forced
+                  to take physical delivery of the contract's asset.
+              expiration_date : datetime
+                  The date when the contract expires.
+              auto_close_date : datetime
+                  The date when the broker will automatically close any
+                  positions in this contract.
+              tick_size : float
+                  The minimum price movement of the contract.
+              multiplier: float
+                  The amount of the underlying asset represented by this
+                  contract.
+              strike : float
+                  The strike price of the option contract expressed in contract currency (typically USD)
+              option_type : str
+                  The option type, either 'C' (for Calls) or 'P' (for Puts)
         exchanges : pd.Dataframe, optional
             The exchanges where assets can be traded. The columns of this
             dataframe are:
@@ -418,7 +477,7 @@ class AssetDBWriter(object):
               timezone : str
                   The timezone of the exchange.
         root_symbols : pd.Dataframe, optional
-            The root symbols for the futures contracts. The columns for this
+            The root symbols for the futures/options contracts. The columns for this
             dataframe are:
 
               root_symbol : str
@@ -449,6 +508,7 @@ class AssetDBWriter(object):
             data = self._load_data(
                 equities if equities is not None else pd.DataFrame(),
                 futures if futures is not None else pd.DataFrame(),
+                options if options is not None else pd.DataFrame(),
                 exchanges if exchanges is not None else pd.DataFrame(),
                 root_symbols if root_symbols is not None else pd.DataFrame(),
             )
@@ -456,11 +516,13 @@ class AssetDBWriter(object):
             self._write_df_to_table(
                 futures_exchanges,
                 data.exchanges,
+                options_exchanges,
                 txn,
                 chunk_size,
             )
             self._write_df_to_table(
                 futures_root_symbols,
+                options_root_symbols,
                 data.root_symbols,
                 txn,
                 chunk_size,
@@ -468,6 +530,12 @@ class AssetDBWriter(object):
             self._write_assets(
                 'future',
                 data.futures,
+                txn,
+                chunk_size,
+            )
+            self._write_assets(
+                'option',
+                data.options,
                 txn,
                 chunk_size,
             )
@@ -503,6 +571,11 @@ class AssetDBWriter(object):
             if mapping_data is not None:
                 raise TypeError('no mapping data expected for futures')
 
+        elif asset_type == 'option':
+            tbl = options_contracts_table
+            if mapping_data is not None:
+                raise TypeError('no mapping data expected for options')
+
         elif asset_type == 'equity':
             tbl = equities_table
             if mapping_data is None:
@@ -518,7 +591,7 @@ class AssetDBWriter(object):
 
         else:
             raise ValueError(
-                "asset_type must be in {'future', 'equity'}, got: %s" %
+                "asset_type must be in {'future', 'option', 'equity'}, got: %s" %
                 asset_type,
             )
 
@@ -638,16 +711,35 @@ class AssetDBWriter(object):
 
         return futures_output
 
-    def _load_data(self, equities, futures, exchanges, root_symbols):
+    def _normalize_options(self, options):
+        options_output = _generate_output_dataframe(
+            data_subset=options,
+            defaults=_options_defaults,
+        )
+        for col in ('symbol', 'root_symbol'):
+            options_output[col] = options_output[col].str.upper()
+
+        for col in ('start_date',
+                    'end_date',
+                    'first_traded',
+                    'notice_date',
+                    'expiration_date',
+                    'auto_close_date'):
+            options_output[col] = _dt_to_epoch_ns(options_output[col])
+
+        return options_output
+
+    def _load_data(self, equities, futures, options, exchanges, root_symbols):
         """
         Returns a standard set of pandas.DataFrames:
-        equities, futures, exchanges, root_symbols
+        equities, futures, options, exchanges, root_symbols
         """
         # Check whether identifier columns have been provided.
         # If they have, set the index to this column.
         # If not, assume the index already cotains the identifier information.
         for df, id_col in [(equities, 'sid'),
                            (futures, 'sid'),
+                           (options, 'sid'),
                            (exchanges, 'exchange'),
                            (root_symbols, 'root_symbol')]:
             if id_col in df.columns:
@@ -655,6 +747,7 @@ class AssetDBWriter(object):
 
         equities_output, equities_mappings = self._normalize_equities(equities)
         futures_output = self._normalize_futures(futures)
+        options_output = self._normalize_options(options)
 
         exchanges_output = _generate_output_dataframe(
             data_subset=exchanges,
@@ -670,6 +763,7 @@ class AssetDBWriter(object):
             equities=equities_output,
             equities_mappings=equities_mappings,
             futures=futures_output,
+            options=options_output,
             exchanges=exchanges_output,
             root_symbols=root_symbols_output,
         )
