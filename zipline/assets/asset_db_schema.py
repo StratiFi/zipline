@@ -6,7 +6,7 @@ import sqlalchemy as sa
 # assets database
 # NOTE: When upgrading this remember to add a downgrade in:
 # .asset_db_migrations
-ASSET_DB_VERSION = 5
+ASSET_DB_VERSION = 6
 
 # A frozenset of the names of all tables in the assets db
 # NOTE: When modifying this schema, update the ASSET_DB_VERSION value
@@ -17,6 +17,8 @@ asset_db_table_names = frozenset({
     'futures_contracts',
     'futures_exchanges',
     'futures_root_symbols',
+    'options_contracts',
+    'options_exchanges',
     'version_info',
 })
 
@@ -142,6 +144,72 @@ futures_contracts = sa.Table(
         'exchange',
         sa.Text,
         sa.ForeignKey('futures_exchanges.exchange'),
+    ),
+    sa.Column('notice_date', sa.Integer, nullable=False),
+    sa.Column('expiration_date', sa.Integer, nullable=False),
+    sa.Column('auto_close_date', sa.Integer, nullable=False),
+    sa.Column('multiplier', sa.Float),
+    sa.Column('tick_size', sa.Float),
+)
+
+options_exchanges = sa.Table(
+    'options_exchanges',
+    metadata,
+    sa.Column(
+        'exchange',
+        sa.Text,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column('timezone', sa.Text),
+)
+
+options_root_symbols = sa.Table(
+    'options_root_symbols',
+    metadata,
+    sa.Column(
+        'root_symbol',
+        sa.Text,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column('root_symbol_id', sa.Integer),
+    sa.Column('sector', sa.Text),
+    sa.Column('description', sa.Text),
+    sa.Column(
+        'exchange',
+        sa.Text,
+        sa.ForeignKey('options_exchanges.exchange'),
+    ),
+)
+
+options_contracts = sa.Table(
+    'options_contracts',
+    metadata,
+    sa.Column(
+        'sid',
+        sa.Integer,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column('symbol', sa.Text, unique=True, index=True),
+    sa.Column(
+        'root_symbol',
+        sa.Text,
+        sa.ForeignKey('options_root_symbols.root_symbol'),
+        index=True
+    ),
+    sa.Column('asset_name', sa.Text),
+    sa.Column('start_date', sa.Integer, default=0, nullable=False),
+    sa.Column('end_date', sa.Integer, nullable=False),
+    sa.Column('first_traded', sa.Integer),
+    sa.Column(
+        'exchange',
+        sa.Text,
+        sa.ForeignKey('options_exchanges.exchange'),
     ),
     sa.Column('notice_date', sa.Integer, nullable=False),
     sa.Column('expiration_date', sa.Integer, nullable=False),

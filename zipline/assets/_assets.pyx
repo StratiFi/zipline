@@ -377,6 +377,127 @@ cdef class Future(Asset):
         return super_dict
 
 
+cdef class Option(Asset):
+
+    cdef readonly object root_symbol
+    cdef readonly object notice_date
+    cdef readonly object expiration_date
+    cdef readonly object tick_size
+    cdef readonly float multiplier
+    cdef readonly float strike
+    cdef readonly object option_type
+
+    _kwargnames = frozenset({
+        'sid',
+        'symbol',
+        'root_symbol',
+        'asset_name',
+        'start_date',
+        'end_date',
+        'notice_date',
+        'expiration_date',
+        'auto_close_date',
+        'first_traded',
+        'exchange',
+        'tick_size',
+        'multiplier',
+        'strike',
+        'option_type',
+    })
+
+    def __init__(self,
+                 int sid, # sid is required
+                 object exchange, # exchange is required
+                 object symbol="",
+                 object root_symbol="",
+                 object asset_name="",
+                 object start_date=None,
+                 object end_date=None,
+                 object notice_date=None,
+                 object expiration_date=None,
+                 object auto_close_date=None,
+                 object first_traded=None,
+                 object tick_size="",
+                 float multiplier=100.0,
+                 float strike=0.0,
+                 object option_type=""):
+
+        super().__init__(
+            sid,
+            exchange,
+            symbol=symbol,
+            asset_name=asset_name,
+            start_date=start_date,
+            end_date=end_date,
+            first_traded=first_traded,
+            auto_close_date=auto_close_date,
+        )
+        self.root_symbol = root_symbol
+        self.notice_date = notice_date
+        self.expiration_date = expiration_date
+        self.tick_size = tick_size
+        self.multiplier = multiplier
+        self.strike = strike
+        self.option_type = option_type
+
+        if auto_close_date is None:
+            if notice_date is None:
+                self.auto_close_date = expiration_date
+            elif expiration_date is None:
+                self.auto_close_date = notice_date
+            else:
+                self.auto_close_date = min(notice_date, expiration_date)
+
+    def __repr__(self):
+        attrs = ('symbol', 'root_symbol', 'asset_name', 'exchange',
+                 'start_date', 'end_date', 'first_traded', 'notice_date',
+                 'expiration_date', 'auto_close_date', 'tick_size',
+                 'multiplier', 'strike', 'option_type')
+        tuples = ((attr, repr(getattr(self, attr, None)))
+                  for attr in attrs)
+        strings = ('%s=%s' % (t[0], t[1]) for t in tuples)
+        params = ', '.join(strings)
+        return 'Option(%d, %s)' % (self.sid, params)
+
+    cpdef __reduce__(self):
+        """
+        Function used by pickle to determine how to serialize/deserialize this
+        class.  Should return a tuple whose first element is self.__class__,
+        and whose second element is a tuple of all the attributes that should
+        be serialized/deserialized during pickling.
+        """
+        return (self.__class__, (self.sid,
+                                 self.exchange,
+                                 self.symbol,
+                                 self.root_symbol,
+                                 self.asset_name,
+                                 self.start_date,
+                                 self.end_date,
+                                 self.notice_date,
+                                 self.expiration_date,
+                                 self.auto_close_date,
+                                 self.first_traded,
+                                 self.tick_size,
+                                 self.multiplier,
+                                 self.strike,
+                                 self.option_type,))
+
+    cpdef to_dict(self):
+        """
+        Convert to a python dict.
+        """
+        super_dict = super(Option, self).to_dict()
+        super_dict['root_symbol'] = self.root_symbol
+        super_dict['notice_date'] = self.notice_date
+        super_dict['expiration_date'] = self.expiration_date
+        super_dict['tick_size'] = self.tick_size
+        super_dict['multiplier'] = self.multiplier
+        super_dict['strike'] = self.strike
+        super_dict['option_type'] = self.option_type
+
+        return super_dict
+
+
 def make_asset_array(int size, Asset asset):
     cdef np.ndarray out = np.empty([size], dtype=object)
     out.fill(asset)

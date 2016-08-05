@@ -38,6 +38,7 @@ from toolz.curried import operator as op
 from zipline.errors import (
     EquitiesNotFound,
     FutureContractsNotFound,
+    OptionContractsNotFound,
     MapAssetIdentifierIndexError,
     MultipleSymbolsFound,
     RootSymbolNotFound,
@@ -45,7 +46,7 @@ from zipline.errors import (
     SymbolNotFound,
 )
 from . import (
-    Asset, Equity, Future,
+    Asset, Equity, Future, Option,
 )
 from .asset_writer import (
     check_version_info,
@@ -103,7 +104,7 @@ def _filter_kwargs(names, dict_):
     """
     return {k: v for k, v in dict_.items() if k in names and v is not None}
 
-
+_filter_option_kwargs = _filter_kwargs(Option._kwargnames)
 _filter_future_kwargs = _filter_kwargs(Future._kwargnames)
 _filter_equity_kwargs = _filter_kwargs(Equity._kwargnames)
 
@@ -430,6 +431,29 @@ class AssetFinder(object):
         """
         return self._retrieve_assets(sids, self.futures_contracts, Future)
 
+    def retrieve_options_contracts(self, sids):
+        """
+        Retrieve Option objects for an iterable of sids.
+
+        Users generally shouldn't need to this method (instead, they should
+        prefer the more general/friendly `retrieve_assets`), but it has a
+        documented interface and tests because it's used upstream.
+
+        Parameters
+        ----------
+        sids : iterable[int]
+
+        Returns
+        -------
+        equities : dict[int -> Equity]
+
+        Raises
+        ------
+        OptionNotFound
+            When any requested asset isn't found.
+        """
+        return self._retrieve_assets(sids, self.options_contracts, Option)
+
     @staticmethod
     def _select_assets_by_sid(asset_tbl, sids):
         return sa.select([asset_tbl]).where(
@@ -518,11 +542,19 @@ class AssetFinder(object):
         hits = {}
 
         querying_equities = issubclass(asset_type, Equity)
-        filter_kwargs = (
-            _filter_equity_kwargs
-            if querying_equities else
-            _filter_future_kwargs
-        )
+        querying_futures = issubclass(asset_type, Future)
+        querying_options = issubclass(asset_type, Option)
+
+        filter_kwargs = None
+
+        if querying_equities:
+            filter_kwargs = _filter_equity_kwargs
+        elif querying_futures:
+            filter_kwargs = _filter_future_kwargs
+        elif querying_options:
+            filter_kwargs = _filter_option_kwargs
+        else:
+            raise "Invalid Asset Type"
 
         rows = self._retrieve_asset_dicts(sids, asset_tbl, querying_equities)
         for row in rows:
@@ -538,8 +570,10 @@ class AssetFinder(object):
         if misses:
             if querying_equities:
                 raise EquitiesNotFound(sids=misses)
-            else:
+            elif querying_futures:
                 raise FutureContractsNotFound(sids=misses)
+            elif querying_options:
+                raise OptionContractsNotFound(sids=misses)
         return hits
 
     def _lookup_symbol_strict(self, symbol, as_of_date):
@@ -815,6 +849,34 @@ class AssetFinder(object):
         contracts = self.retrieve_futures_contracts(sids)
         return [contracts[sid] for sid in sids]
 
+    def lookup_option_symbol(self, symbol):
+        """Lookup a option contract by symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            The symbol of the desired contract.
+
+        Returns
+        -------
+        option : Option
+            The option contract referenced by ``symbol``.
+
+        Raises
+        ------
+        SymbolNotFound
+            Raised when no contract named 'symbol' is found.
+
+        """
+
+        data = self._select_asset_by_symbol(self.options_contracts, symbol)\
+                   .execute().fetchone()
+
+        # If no data found, raise an exception
+        if not data:
+            raise SymbolNotFound(symbol=symbol)
+        return self.retrieve_asset(data['sid'])
+
     def lookup_expired_futures(self, start, end):
         if not isinstance(start, pd.Timestamp):
             start = pd.Timestamp(start)
@@ -824,6 +886,137 @@ class AssetFinder(object):
         end = end.value
 
         fc_cols = self.futures_contracts.c
+
+        nd = sa.func.nullif(fc_cols.notice_date, pd.tslib.iNaT)
+        ed = sa.func.nullif(fc_cols.expiration_date, pd.tslib.iNaT)
+        date = sa.func.coalesce(sa.func.min(nd, ed), ed, nd)
+
+        sids = list(map(
+            itemgetter('sid'),
+            sa.select((fc_cols.sid,)).where(
+                (date >= start) & (date < end)).order_by(
+                sa.func.coalesce(ed, nd).asc()
+            ).execute().fetchall()
+        ))
+
+        return sids
+
+    def lookup_option_chain(self, root_symbol, as_of_date):
+        """ Return the options chain for a given root symbol.
+
+        Parameters
+        ----------
+        root_symbol : str
+            Root symbol of the desired option.
+
+        as_of_date : pd.Timestamp or pd.NaT
+            Date at which the chain determination is rooted. I.e. the
+            existing contract whose notice date/expiration date is first
+            after this date is the primary contract, etc. If NaT is
+            given, the chain is unbounded, and all contracts for this
+            root symbol are returned.
+
+        Returns
+        -------
+        list
+            A list of Option objects, the chain for the given
+            parameters.
+
+        Raises
+        ------
+        RootSymbolNotFound
+            Raised when a Option chain could not be found for the given
+            root symbol.
+        """
+
+        fc_cols = self.options_contracts.c
+
+        if as_of_date is pd.NaT:
+            # If the as_of_date is NaT, get all contracts for this
+            # root symbol.
+            sids = list(map(
+                itemgetter('sid'),
+                sa.select((fc_cols.sid,)).where(
+                    (fc_cols.root_symbol == root_symbol),
+                ).order_by(
+                    fc_cols.notice_date.asc(),
+                ).execute().fetchall()))
+        else:
+            as_of_date = as_of_date.value
+
+            sids = list(map(
+                itemgetter('sid'),
+                sa.select((fc_cols.sid,)).where(
+                    (fc_cols.root_symbol == root_symbol) &
+
+                    # Filter to contracts that are still valid. If both
+                    # exist, use the one that comes first in time (i.e.
+                    # the lower value). If either notice_date or
+                    # expiration_date is NaT, use the other. If both are
+                    # NaT, the contract cannot be included in any chain.
+                    sa.case(
+                        [
+                            (
+                                fc_cols.notice_date == pd.NaT.value,
+                                fc_cols.expiration_date >= as_of_date
+                            ),
+                            (
+                                fc_cols.expiration_date == pd.NaT.value,
+                                fc_cols.notice_date >= as_of_date
+                            )
+                        ],
+                        else_=(
+                            sa.func.min(
+                                fc_cols.notice_date,
+                                fc_cols.expiration_date
+                            ) >= as_of_date
+                        )
+                    )
+                ).order_by(
+                    # If both dates exist sort using minimum of
+                    # expiration_date and notice_date
+                    # else if one is NaT use the other.
+                    sa.case(
+                        [
+                            (
+                                fc_cols.expiration_date == pd.NaT.value,
+                                fc_cols.notice_date
+                            ),
+                            (
+                                fc_cols.notice_date == pd.NaT.value,
+                                fc_cols.expiration_date
+                            )
+                        ],
+                        else_=(
+                            sa.func.min(
+                                fc_cols.notice_date,
+                                fc_cols.expiration_date
+                            )
+                        )
+                    ).asc()
+                ).execute().fetchall()
+            ))
+
+        if not sids:
+            # Check if root symbol exists.
+            count = sa.select((sa.func.count(fc_cols.sid),)).where(
+                fc_cols.root_symbol == root_symbol,
+            ).scalar()
+            if count == 0:
+                raise RootSymbolNotFound(root_symbol=root_symbol)
+
+        contracts = self.retrieve_options_contracts(sids)
+        return [contracts[sid] for sid in sids]
+
+    def lookup_expired_options(self, start, end):
+        if not isinstance(start, pd.Timestamp):
+            start = pd.Timestamp(start)
+        start = start.value
+        if not isinstance(end, pd.Timestamp):
+            end = pd.Timestamp(end)
+        end = end.value
+
+        fc_cols = self.options_contracts.c
 
         nd = sa.func.nullif(fc_cols.notice_date, pd.tslib.iNaT)
         ed = sa.func.nullif(fc_cols.expiration_date, pd.tslib.iNaT)

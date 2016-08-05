@@ -17,6 +17,7 @@ from ._assets import (
     Asset,
     Equity,
     Future,
+    Option,
     make_asset_array,
     CACHE_FILE_TEMPLATE
 )
@@ -33,6 +34,7 @@ __all__ = [
     'AssetDBWriter',
     'Equity',
     'Future',
+    'Option',
     'AssetFinder',
     'AssetConvertible',
     'make_asset_array',
