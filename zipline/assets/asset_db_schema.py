@@ -215,7 +215,15 @@ options_contracts = sa.Table(
     sa.Column('expiration_date', sa.Integer, nullable=False),
     sa.Column('auto_close_date', sa.Integer, nullable=False),
     sa.Column('multiplier', sa.Float),
-    sa.Column('tick_size', sa.Float),
+    sa.Column('strike', sa.Float),
+    sa.Column('option_type', sa.Text),
+    sa.Column('delta', sa.Float),
+    sa.Column('gamma', sa.Float),
+    sa.Column('theta', sa.Float),
+    sa.Column('vega', sa.Float),
+    sa.Column('open_interest', sa.Float),
+    sa.Column('volume', sa.Integer),
+    sa.Column('tick_size', sa.Integer),
 )
 
 asset_router = sa.Table(

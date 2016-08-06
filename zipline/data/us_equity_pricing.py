@@ -159,7 +159,10 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
                 stacklevel=3,  # one extra frame for `expect_element`
             )
 
-    df[mask] = 0
+    #df[mask] = 0
+    print 'REMOVE THAT to make it WORK !! TB CHECKED'
+    # remove that to make it work for options!!!!
+    df = df.where(mask, other=0)
     return df
 
 
@@ -886,7 +889,8 @@ class SQLiteAdjustmentWriter(object):
                  overwrite=False):
         if isinstance(conn_or_path, sqlite3.Connection):
             self.conn = conn_or_path
-        elif isinstance(conn_or_path, str):
+        elif isinstance(conn_or_path, (str, unicode)):
+            conn_or_path = str(conn_or_path)
             if overwrite:
                 try:
                     remove(conn_or_path)
@@ -896,10 +900,11 @@ class SQLiteAdjustmentWriter(object):
             self.conn = sqlite3.connect(conn_or_path)
             self.uri = conn_or_path
         else:
-            raise TypeError("Unknown connection type %s" % type(conn_or_path))
+            raise TypeError("Unknown connection type {0} {1}".format(type(conn_or_path), conn_or_path))
 
         self._equity_daily_bar_reader = equity_daily_bar_reader
         self._calendar = calendar
+        #self.conn.text_factory = str
 
     def _write(self, tablename, expected_dtypes, frame):
         if frame is None or frame.empty:

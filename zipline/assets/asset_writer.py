@@ -367,8 +367,10 @@ class AssetDBWriter(object):
     DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
 
     def __init__(self, engine):
-        if isinstance(engine, str):
+        if isinstance(engine, (str, unicode)):
+            engine = str(engine)
             engine = sa.create_engine('sqlite:///' + engine)
+
         self.engine = engine
 
     def write(self,
@@ -516,12 +518,22 @@ class AssetDBWriter(object):
             self._write_df_to_table(
                 futures_exchanges,
                 data.exchanges,
+                txn,
+                chunk_size,
+            )
+            self._write_df_to_table(
                 options_exchanges,
+                data.exchanges,
                 txn,
                 chunk_size,
             )
             self._write_df_to_table(
                 futures_root_symbols,
+                data.root_symbols,
+                txn,
+                chunk_size,
+            )
+            self._write_df_to_table(
                 options_root_symbols,
                 data.root_symbols,
                 txn,
