@@ -160,8 +160,7 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
             )
 
     #df[mask] = 0
-    print 'REMOVE THAT to make it WORK !! TB CHECKED'
-    # remove that to make it work for options!!!!
+    # works for options!!!!
     df = df.where(mask, other=0)
     return df
 
@@ -260,6 +259,7 @@ class BcolzDailyBarWriter(object):
         table : bcolz.ctable
             The newly-written table.
         """
+        print 'Entering writing process... '
         ctx = maybe_show_progress(
             ((sid, to_ctable(df, invalid_data_behavior)) for sid, df in data),
             show_progress=show_progress,
@@ -383,7 +383,7 @@ class BcolzDailyBarWriter(object):
         full_table.attrs['first_trading_day'] = (
             earliest_date if earliest_date is not None else iNaT
         )
-
+        print 'TABLE WRITTEN'
         full_table.attrs['first_row'] = first_row
         full_table.attrs['last_row'] = last_row
         full_table.attrs['calendar_offset'] = calendar_offset

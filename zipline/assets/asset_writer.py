@@ -369,6 +369,7 @@ class AssetDBWriter(object):
     def __init__(self, engine):
         if isinstance(engine, (str, unicode)):
             engine = str(engine)
+            print 'ENGINE={}'.format(engine)
             engine = sa.create_engine('sqlite:///' + engine)
 
         self.engine = engine
@@ -662,7 +663,6 @@ class AssetDBWriter(object):
 
             # Create the SQL tables if they do not already exist.
             metadata.create_all(txn, checkfirst=True)
-
             if tables_already_exist:
                 check_version_info(txn, version_info, ASSET_DB_VERSION)
             else:
