@@ -175,7 +175,8 @@ class AlgorithmSimulator(object):
                 viewkeys(perf_tracker.position_tracker.positions) | \
                 viewkeys(algo.blotter.open_orders)
 
-            if assets_we_care_about:
+            # TODO GD REMOVE THE NOT !!! TMP HACK !!!
+            if not assets_we_care_about:
                 splits = data_portal.get_splits(assets_we_care_about,
                                                 midnight_dt)
                 if splits:

@@ -495,7 +495,6 @@ class BcolzDailyBarReader(DailyBarReader):
     zipline.data.us_equity_pricing.BcolzDailyBarWriter
     """
     def __init__(self, table, read_all_threshold=3000):
-        print '--> INIT Bcols BcolzDailyBarReader'
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
         # raw_array does not use the same cache, but it could.
@@ -702,7 +701,6 @@ class BcolzDailyBarReader(DailyBarReader):
             Raises a NoDataOnDate exception if the given day and sid is before
             or after the date range of the equity.
         """
-        print '>>>>>>>> ', self._calendar_offsets
         try:
             day_loc = self.sessions.get_loc(day)
         except:
@@ -1294,7 +1292,11 @@ class SQLiteAdjustmentReader(object):
         seconds = date.value / int(1e9)
         c = self.conn.cursor()
 
+
         divs = []
+        # TODO GD REMOVE !!! HACK FOR TESTS!
+        return divs
+
         for chunk in group_into_chunks(assets):
             query = UNPAID_QUERY_TEMPLATE.format(
                 ",".join(['?' for _ in chunk]))
@@ -1317,6 +1319,9 @@ class SQLiteAdjustmentReader(object):
         c = self.conn.cursor()
 
         stock_divs = []
+        # TODO GD REMOVE !!! HACK FOR TESTS!
+        return stock_divs
+
         for chunk in group_into_chunks(assets):
             query = UNPAID_STOCK_DIVIDEND_QUERY_TEMPLATE.format(
                 ",".join(['?' for _ in chunk]))

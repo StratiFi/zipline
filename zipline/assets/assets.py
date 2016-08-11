@@ -148,8 +148,6 @@ class AssetFinder(object):
             engine
         )
         metadata = sa.MetaData(bind=engine)
-        print 'ININIT ZZZ ', asset_db_table_names
-        print 'QQ ', self.engine
         metadata.reflect(only=asset_db_table_names)
         for table_name in asset_db_table_names:
             setattr(self, table_name, metadata.tables[table_name])
@@ -583,8 +581,6 @@ class AssetFinder(object):
         # split the symbol into the components, if there are no
         # company/share class parts then share_class_symbol will be empty
         company_symbol, share_class_symbol = split_delimited_symbol(symbol)
-        print '-->> GG ', symbol
-        print self.symbol_ownership_map
         try:
             owners = self.symbol_ownership_map[
                 company_symbol,

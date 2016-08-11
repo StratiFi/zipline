@@ -1271,6 +1271,28 @@ class TradingAlgorithm(object):
             as_of_date=as_of_date
         )
 
+    @api_method
+    @preprocess(symbol=ensure_upper_case)
+    def option_symbol(self, symbol):
+        """Lookup an option contract with a given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            The symbol of the desired contract.
+
+        Returns
+        -------
+        option : Option
+            The option that trades with the name ``symbol``.
+
+        Raises
+        ------
+        SymbolNotFound
+            Raised when no contract named 'symbol' is found.
+        """
+        return self.asset_finder.lookup_option_symbol(symbol)
+
     def _calculate_order_value_amount(self, asset, value):
         """
         Calculates how many shares/contracts to order based on the type of
