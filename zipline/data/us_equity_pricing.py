@@ -495,6 +495,7 @@ class BcolzDailyBarReader(DailyBarReader):
     zipline.data.us_equity_pricing.BcolzDailyBarWriter
     """
     def __init__(self, table, read_all_threshold=3000):
+        print '--> INIT Bcols BcolzDailyBarReader'
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
         # raw_array does not use the same cache, but it could.
@@ -701,6 +702,7 @@ class BcolzDailyBarReader(DailyBarReader):
             Raises a NoDataOnDate exception if the given day and sid is before
             or after the date range of the equity.
         """
+        print '>>>>>>>> ', self._calendar_offsets
         try:
             day_loc = self.sessions.get_loc(day)
         except:
