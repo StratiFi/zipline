@@ -259,7 +259,6 @@ class BcolzDailyBarWriter(object):
         table : bcolz.ctable
             The newly-written table.
         """
-        print 'Entering writing process... '
         ctx = maybe_show_progress(
             ((sid, to_ctable(df, invalid_data_behavior)) for sid, df in data),
             show_progress=show_progress,

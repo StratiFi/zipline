@@ -369,7 +369,6 @@ class AssetDBWriter(object):
     def __init__(self, engine):
         if isinstance(engine, (str, unicode)):
             engine = str(engine)
-            print 'ENGINE={}'.format(engine)
             engine = sa.create_engine('sqlite:///' + engine)
 
         self.engine = engine
@@ -609,8 +608,6 @@ class AssetDBWriter(object):
             )
 
         self._write_df_to_table(tbl, assets, txn, chunk_size)
-        print 'AAAA ', asset_type, assets.index.values
-        print 'BB ',asset_router.c.sid.name
         pd.DataFrame({
             asset_router.c.sid.name: assets.index.values,
             asset_router.c.asset_type.name: asset_type,
