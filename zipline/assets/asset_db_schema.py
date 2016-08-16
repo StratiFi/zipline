@@ -214,7 +214,7 @@ options_contracts = sa.Table(
     sa.Column('notice_date', sa.Integer, nullable=False),
     sa.Column('expiration_date', sa.Integer, nullable=False),
     sa.Column('auto_close_date', sa.Integer, nullable=False),
-    sa.Column('multiplier', sa.Float),
+    sa.Column('multiplier', sa.Float, default=100., nullable=False),
     sa.Column('strike', sa.Float),
     sa.Column('option_type', sa.Text),
     sa.Column('delta', sa.Float),

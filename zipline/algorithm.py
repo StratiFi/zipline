@@ -81,7 +81,7 @@ from zipline.finance.slippage import (
     SlippageModel
 )
 from zipline.finance.cancel_policy import NeverCancel, CancelPolicy
-from zipline.assets import Asset, Future
+from zipline.assets import Asset, Future, Option
 from zipline.assets.futures import FutureChain
 from zipline.gens.tradesimulation import AlgorithmSimulator
 from zipline.pipeline.engine import (
@@ -1335,6 +1335,12 @@ class TradingAlgorithm(object):
 
         if isinstance(asset, Future):
             value_multiplier = asset.multiplier
+        else:
+            value_multiplier = 1
+
+        if isinstance(asset, Option):
+            value_multiplier = asset.multiplier
+            print 'ZZZZZ value_multiplier --> ', value_multiplier
         else:
             value_multiplier = 1
 

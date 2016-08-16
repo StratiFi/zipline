@@ -104,7 +104,7 @@ _options_defaults = {
     'expiration_date': None,
     'auto_close_date': None,
     'tick_size': None,
-    'multiplier': 100,
+    'multiplier': 100.,
     'strike':0,
     'option_type':None,
 }
