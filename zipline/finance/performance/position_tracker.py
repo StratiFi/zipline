@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import division
-
+import pdb
 import logbook
 import numpy as np
 from collections import namedtuple
@@ -31,7 +31,7 @@ from six import iteritems, itervalues
 
 import zipline.protocol as zp
 from zipline.assets import (
-    Equity, Future
+    Equity, Future, Option
 )
 from zipline.errors import PositionTrackerMissingAssetFinder
 from . position import positiondict
@@ -150,6 +150,9 @@ class PositionTracker(object):
             if isinstance(asset, Future):
                 self._position_value_multipliers[sid] = 0
                 self._position_exposure_multipliers[sid] = asset.multiplier
+            if isinstance(asset, Option):
+                self._position_value_multipliers[sid] = asset.multiplier
+                self._position_exposure_multipliers[sid] = asset.multiplier
 
     def update_positions(self, positions):
         # update positions in batch
@@ -192,6 +195,11 @@ class PositionTracker(object):
             # if this position now has 0 shares, remove it from our internal
             # bookkeeping.
             del self.positions[sid]
+
+            # GD FIXING ISSUE OF MIXING MULTIPLE MULTIPLIERS
+            # FIXME TODO check that this is ok forever..
+            del self._position_value_multipliers[sid]
+            del self._position_exposure_multipliers[sid]
 
             try:
                 # if this position exists in our user-facing dictionary,
@@ -388,7 +396,6 @@ class PositionTracker(object):
                     dt,
                     self.data_frequency
                 )
-
                 if not np.isnan(last_sale_price):
                     position.last_sale_price = last_sale_price
 
@@ -404,7 +411,6 @@ class PositionTracker(object):
             last_sale_prices,
             self._position_value_multipliers
         )
-
         position_exposures = calc_position_exposures(
             amounts,
             last_sale_prices,

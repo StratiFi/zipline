@@ -1335,12 +1335,8 @@ class TradingAlgorithm(object):
 
         if isinstance(asset, Future):
             value_multiplier = asset.multiplier
-        else:
-            value_multiplier = 1
-
-        if isinstance(asset, Option):
+        elif isinstance(asset, Option):
             value_multiplier = asset.multiplier
-            print 'ZZZZZ value_multiplier --> ', value_multiplier
         else:
             value_multiplier = 1
 
@@ -1766,6 +1762,7 @@ class TradingAlgorithm(object):
             return None
 
         value = self.portfolio.portfolio_value * percent
+
         return self.order_value(asset, value,
                                 limit_price=limit_price,
                                 stop_price=stop_price,
