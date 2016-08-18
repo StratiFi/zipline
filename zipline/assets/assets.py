@@ -1049,7 +1049,7 @@ class AssetFinder(object):
                 (fc_cols.root_symbol == root_symbol),
                 (fc_cols.expiration_date > desired_expiration_date_timestamp)
             )
-        ).order_by('(expiration_date - {0})'.format(desired_expiration_date_timestamp)).distinct().limit(2).execute().fetchall()
+        ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(2).execute().fetchall()
 
         closest_expirations = tuple( [x[0] for x in closest_expirations] )
 
@@ -1065,7 +1065,7 @@ class AssetFinder(object):
                     (fc_cols.expiration_date == closest_expirations[0])
                 )
             ).order_by(
-                'abs(strike - {0})'.format(desired_strike)
+                sa.text('abs(strike - {0})'.format(desired_strike))
             ).limit(
                 num_contracts_to_return
             ).execute().fetchall()
@@ -1082,7 +1082,7 @@ class AssetFinder(object):
                     (fc_cols.expiration_date == closest_expirations[1])
                 )
             ).order_by(
-                'abs(strike - {0})'.format(desired_strike)
+                sa.text('abs(strike - {0})'.format(desired_strike))
             ).limit(
                 num_contracts_to_return
             ).execute().fetchall()
