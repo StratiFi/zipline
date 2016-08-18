@@ -1009,6 +1009,71 @@ class AssetFinder(object):
         contracts = self.retrieve_options_contracts(sids)
         return [contracts[sid] for sid in sids]
 
+
+    def lookup_option_links(self, root_symbol, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
+        """ Return an extract of the options chain for a given root symbol, around a given strike and maturity days
+
+        Parameters
+        ----------
+        root_symbol : str
+            Root symbol of the desired option.
+
+        desired_strike : float
+            target strike price around which the search is performed
+
+        desired_maturity_days : int
+            target tenor around which the search is performed
+
+        num_contracts_to_return : int
+            we limit the number of options returned to this number
+
+        Returns
+        -------
+        list
+            A list of Option objects, the chain link for the given
+            parameters.
+
+        Raises
+        ------
+        RootSymbolNotFound
+            Raised when a Option chain could not be found for the given
+            root symbol.
+        """
+
+        fc_cols = self.options_contracts.c
+        desired_expiration_date_timestamp = pd.Timestamp(desired_minimum_expiration_date).value
+
+        # first get the 2 closest expiration dates
+        closest_expirations = sa.select([fc_cols.expiration_date]).where(
+            (fc_cols.root_symbol == root_symbol)
+        ).order_by('ABS(expiration_date - {0})'.format(desired_expiration_date_timestamp)).distinct().limit(2).execute().fetchall()
+
+        closest_expirations = tuple( [x[0] for x in closest_expirations] )
+
+        # now get the closest strikes for those 2 expiration dates
+        sids = list(map(
+            itemgetter('sid'),
+            sa.select(
+                (fc_cols.sid,),
+                fc_cols.expiration_date.in_(closest_expirations)
+            ).where(
+                (fc_cols.root_symbol == root_symbol)).order_by(
+                'ABS(expiration_date - {0})'.format(desired_expiration_date_timestamp),
+                'abs(strike - {0})'.format(desired_strike)
+            ).limit(num_contracts_to_return).execute().fetchall()
+        ))
+
+        if not sids:
+            # Check if root symbol exists.
+            count = sa.select((sa.func.count(fc_cols.sid),)).where(
+                fc_cols.root_symbol == root_symbol,
+            ).scalar()
+            if count == 0:
+                raise RootSymbolNotFound(root_symbol=root_symbol)
+
+        contracts = self.retrieve_options_contracts(sids)
+        return [contracts[sid] for sid in sids]
+
     def lookup_expired_options(self, start, end):
         if not isinstance(start, pd.Timestamp):
             start = pd.Timestamp(start)
