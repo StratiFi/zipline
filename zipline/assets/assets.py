@@ -1045,8 +1045,11 @@ class AssetFinder(object):
 
         # first get the 2 closest expiration dates
         closest_expirations = sa.select([fc_cols.expiration_date]).where(
-            (fc_cols.root_symbol == root_symbol)
-        ).order_by('ABS(expiration_date - {0})'.format(desired_expiration_date_timestamp)).distinct().limit(2).execute().fetchall()
+            sa.and_(
+                (fc_cols.root_symbol == root_symbol),
+                (fc_cols.expiration_date > desired_expiration_date_timestamp)
+            )
+        ).order_by('(expiration_date - {0})'.format(desired_expiration_date_timestamp)).distinct().limit(2).execute().fetchall()
 
         closest_expirations = tuple( [x[0] for x in closest_expirations] )
 
@@ -1057,11 +1060,33 @@ class AssetFinder(object):
                 (fc_cols.sid,),
                 fc_cols.expiration_date.in_(closest_expirations)
             ).where(
-                (fc_cols.root_symbol == root_symbol)).order_by(
-                'ABS(expiration_date - {0})'.format(desired_expiration_date_timestamp),
+                sa.and_(
+                    (fc_cols.root_symbol == root_symbol),
+                    (fc_cols.expiration_date == closest_expirations[0])
+                )
+            ).order_by(
                 'abs(strike - {0})'.format(desired_strike)
-            ).limit(num_contracts_to_return).execute().fetchall()
+            ).limit(
+                num_contracts_to_return
+            ).execute().fetchall()
         ))
+        # now let's do the same for the second closest expiration date
+        sids += map(
+            itemgetter('sid'),
+            sa.select(
+                (fc_cols.sid,),
+                fc_cols.expiration_date.in_(closest_expirations)
+            ).where(
+                sa.and_(
+                    (fc_cols.root_symbol == root_symbol),
+                    (fc_cols.expiration_date == closest_expirations[1])
+                )
+            ).order_by(
+                'abs(strike - {0})'.format(desired_strike)
+            ).limit(
+                num_contracts_to_return
+            ).execute().fetchall()
+        )
 
         if not sids:
             # Check if root symbol exists.
