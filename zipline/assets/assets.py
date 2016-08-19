@@ -1010,7 +1010,7 @@ class AssetFinder(object):
         return [contracts[sid] for sid in sids]
 
 
-    def lookup_option_links(self, root_symbol, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
+    def lookup_option_links(self, root_symbol, option_type, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
         """ Return an extract of the options chain for a given root symbol, around a given strike and maturity days
 
         Parameters
@@ -1039,7 +1039,7 @@ class AssetFinder(object):
             Raised when a Option chain could not be found for the given
             root symbol.
         """
-
+        option_type = sa.text('\'' + option_type + '\'')
         fc_cols = self.options_contracts.c
         desired_expiration_date_timestamp = pd.Timestamp(desired_minimum_expiration_date).value
 
@@ -1047,6 +1047,7 @@ class AssetFinder(object):
         closest_expirations = sa.select([fc_cols.expiration_date]).where(
             sa.and_(
                 (fc_cols.root_symbol == root_symbol),
+                (fc_cols.option_type == option_type),
                 (fc_cols.expiration_date > desired_expiration_date_timestamp)
             )
         ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(2).execute().fetchall()
@@ -1062,6 +1063,7 @@ class AssetFinder(object):
             ).where(
                 sa.and_(
                     (fc_cols.root_symbol == root_symbol),
+                    (fc_cols.option_type == option_type),
                     (fc_cols.expiration_date == closest_expirations[0])
                 )
             ).order_by(
@@ -1079,6 +1081,7 @@ class AssetFinder(object):
             ).where(
                 sa.and_(
                     (fc_cols.root_symbol == root_symbol),
+                    (fc_cols.option_type == option_type),
                     (fc_cols.expiration_date == closest_expirations[1])
                 )
             ).order_by(

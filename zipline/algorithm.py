@@ -1166,7 +1166,7 @@ class TradingAlgorithm(object):
 
     @api_method
     def symbols(self, *args):
-        """Lookup multuple Equities as a list.
+        """Lookup multiple Equities as a list.
 
         Parameters
         ----------
@@ -1189,6 +1189,7 @@ class TradingAlgorithm(object):
         --------
         :func:`zipline.api.set_symbol_lookup_date`
         """
+        print '0-0-0-0', args
         return [self.symbol(identifier) for identifier in args]
 
     @api_method

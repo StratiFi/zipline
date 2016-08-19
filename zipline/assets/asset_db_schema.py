@@ -217,12 +217,6 @@ options_contracts = sa.Table(
     sa.Column('multiplier', sa.Float, default=100., nullable=False),
     sa.Column('strike', sa.Float),
     sa.Column('option_type', sa.Text),
-    sa.Column('delta', sa.Float),
-    sa.Column('gamma', sa.Float),
-    sa.Column('theta', sa.Float),
-    sa.Column('vega', sa.Float),
-    sa.Column('open_interest', sa.Float),
-    sa.Column('volume', sa.Integer),
     sa.Column('tick_size', sa.Integer),
 )
 
