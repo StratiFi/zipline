@@ -189,6 +189,7 @@ class PerformanceTracker(object):
             self.todays_performance.period_close = self.saved_dt
 
     def get_portfolio(self, performance_needs_update):
+        # print 'IN GET PORT'
         if performance_needs_update:
             self.update_performance()
             self.account_needs_update = True
@@ -196,6 +197,7 @@ class PerformanceTracker(object):
 
     def update_performance(self):
         # calculate performance as of last trade
+        # print 'UPDATE PERFO'
         self.cumulative_performance.calculate_performance()
         self.todays_performance.calculate_performance()
 
@@ -259,6 +261,7 @@ class PerformanceTracker(object):
                 capital_change_amount)
 
     def process_transaction(self, transaction):
+        # print '\n IN PROCESS TRANSACTION', transaction.price
         self.txn_count += 1
         self.cumulative_performance.handle_execution(transaction)
         self.todays_performance.handle_execution(transaction)
@@ -285,6 +288,7 @@ class PerformanceTracker(object):
     def process_close_position(self, asset, dt, data_portal):
         txn = self.position_tracker.\
             maybe_create_close_position_transaction(asset, dt, data_portal)
+        # print 'TXN PR CLOSE ', txn.price
         if txn:
             self.process_transaction(txn)
 

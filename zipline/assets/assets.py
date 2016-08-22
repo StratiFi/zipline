@@ -1010,13 +1010,16 @@ class AssetFinder(object):
         return [contracts[sid] for sid in sids]
 
 
-    def lookup_option_links(self, root_symbol, option_type, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
+    def lookup_option_links(self, root_symbol, current_date, option_type, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
         """ Return an extract of the options chain for a given root symbol, around a given strike and maturity days
 
         Parameters
         ----------
         root_symbol : str
             Root symbol of the desired option.
+
+        current_date : str
+            minimum t_date
 
         desired_strike : float
             target strike price around which the search is performed
@@ -1040,14 +1043,17 @@ class AssetFinder(object):
             root symbol.
         """
         option_type = sa.text('\'' + option_type + '\'')
+
         fc_cols = self.options_contracts.c
         desired_expiration_date_timestamp = pd.Timestamp(desired_minimum_expiration_date).value
+        desired_min_trading_date_timestamp = pd.Timestamp(current_date).value
 
         # first get the 2 closest expiration dates
         closest_expirations = sa.select([fc_cols.expiration_date]).where(
             sa.and_(
                 (fc_cols.root_symbol == root_symbol),
                 (fc_cols.option_type == option_type),
+                (fc_cols.start_date <= desired_min_trading_date_timestamp),
                 (fc_cols.expiration_date > desired_expiration_date_timestamp)
             )
         ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(2).execute().fetchall()
@@ -1082,6 +1088,7 @@ class AssetFinder(object):
                 sa.and_(
                     (fc_cols.root_symbol == root_symbol),
                     (fc_cols.option_type == option_type),
+                    (fc_cols.start_date <= desired_min_trading_date_timestamp),
                     (fc_cols.expiration_date == closest_expirations[1])
                 )
             ).order_by(

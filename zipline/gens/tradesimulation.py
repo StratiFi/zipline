@@ -113,12 +113,14 @@ class AlgorithmSimulator(object):
 
             # handle any transactions and commissions coming out new orders
             # placed in the last bar
+
             new_transactions, new_commissions, closed_orders = \
                 blotter.get_transactions(current_data)
 
             blotter.prune_orders(closed_orders)
 
             for transaction in new_transactions:
+                print 'TRANSAC IN NEW T', transaction.price, transaction.amount
                 perf_tracker.process_transaction(transaction)
 
                 # since this order was modified, record it

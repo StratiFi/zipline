@@ -455,6 +455,7 @@ class TradingAlgorithm(object):
         # Unlike trading controls which remain constant unless placing an
         # order, account controls can change each bar. Thus, must check
         # every bar no matter if the algorithm places an order or not.
+        # print 'HANDLLEEEEE'
         self.validate_account_controls()
 
     def analyze(self, perf):
@@ -1189,7 +1190,7 @@ class TradingAlgorithm(object):
         --------
         :func:`zipline.api.set_symbol_lookup_date`
         """
-        print '0-0-0-0', args
+        # print '0-0-0-0', args
         return [self.symbol(identifier) for identifier in args]
 
     @api_method
@@ -1965,7 +1966,7 @@ class TradingAlgorithm(object):
         """
         if not self._can_order_asset(asset):
             return None
-
+        # print 'GD !!! ', self.portfolio.portfolio_value, target
         target_value = self.portfolio.portfolio_value * target
         return self.order_target_value(asset, target_value,
                                        limit_price=limit_price,

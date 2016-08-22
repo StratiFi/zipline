@@ -20,6 +20,8 @@ from six import with_metaclass
 
 from zipline.finance.transaction import create_transaction
 
+import numpy as np
+
 SELL = 1 << 0
 BUY = 1 << 1
 STOP = 1 << 2
@@ -70,7 +72,10 @@ class SlippageModel(with_metaclass(abc.ABCMeta)):
         volume = data.current(asset, "volume")
 
         if volume == 0:
-            return
+            pass
+            # GD meant to avoid delayed executions based on volume checks
+            # return
+
 
         # can use the close price, since we verified there's volume in this
         # bar.
@@ -132,6 +137,7 @@ class VolumeShareSlippage(SlippageModel):
                    price_impact=self.price_impact)
 
     def process_order(self, data, order):
+        print 'GGGG ', order.asset, data.current(order.asset, 'close'), data.current(order.asset, 'price')
         volume = data.current(order.asset, "volume")
 
         max_volume = self.volume_limit * volume
@@ -158,6 +164,22 @@ class VolumeShareSlippage(SlippageModel):
                            self.volume_limit)
 
         price = data.current(order.asset, "close")
+        if (price != data.current(order.asset, "price")) and not (np.isnan(price)):
+            print 'WEIRD TMPFIX: ', data.current(order.asset, "close"), data.current(order.asset, "price"),\
+                data.current(order.asset, "volume"), data.current(order.asset, "high")
+
+        if np.isnan(price):
+            # FIXME
+            # the issue arises when the option is past expiration and a request of close price is made.
+            # 'price' field still exists but 'close' field is nan. Not sure why but maybe price is a proxy of close,
+            # whereas 'close' is directly extracted from bcolz data, and thus is nan once we're past expiration
+            # we'll have to build a separate slippage model for options anyways
+            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            print 'THIS IS A TMP FIX. CHECK WHY CLOSE IS NAN for this OPTION + dont use numpy if you can. FIXME !'
+            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            price = data.current(order.asset, "price")
+            print 'TMPFIX: ', data.current(order.asset, "close"), data.current(order.asset, "price"),\
+                data.current(order.asset, "volume"), data.current(order.asset, "high")
 
         simulated_impact = volume_share ** 2 \
             * math.copysign(self.price_impact, order.direction) \
@@ -176,7 +198,7 @@ class VolumeShareSlippage(SlippageModel):
             if (order.direction > 0 and impacted_price > order.limit) or \
                     (order.direction < 0 and impacted_price < order.limit):
                 return None, None
-
+        print 'IN SLIPPAGE !!!!!!!!!!!!!!!!!!!!!!!!! check ', order.asset, price
         return (
             impacted_price,
             math.copysign(cur_volume, order.direction)
@@ -202,3 +224,16 @@ class FixedSlippage(SlippageModel):
             price + (self.spread / 2.0 * order.direction),
             order.amount
         )
+
+
+class NoSlippage(SlippageModel):
+   def __init__(self):
+       pass
+
+   def process_order(self, data, order):
+       price = data.current(order.asset, "price")
+
+       return (
+           price,
+           order.amount
+       )

@@ -77,7 +77,7 @@ import numpy as np
 
 from collections import namedtuple
 from zipline.assets import Future
-
+import pdb
 try:
     # optional cython based OrderedDict
     from cyordereddict import OrderedDict
@@ -218,6 +218,7 @@ class PerformancePeriod(object):
             raise ValueError("position_tracker can not be None")
         self._position_tracker = obj
         # we only calculate perf once we inject PositionTracker
+        print 'WWW $$ ', self.cash_flow
         self.calculate_performance()
 
     def adjust_period_starting_capital(self, capital_change):
@@ -282,6 +283,7 @@ class PerformancePeriod(object):
         self.adjust_cash(-cost)
 
     def adjust_cash(self, amount):
+        print 'ADJ ', amount, self.cash_flow
         self.cash_flow += amount
 
     def adjust_field(self, field, value):
@@ -303,12 +305,13 @@ class PerformancePeriod(object):
 
     def calculate_performance(self):
         pt = self.position_tracker
+        # print 'IN CALC PERF'
         pos_stats = pt.stats()
         self.ending_value = pos_stats.net_value
         self.ending_exposure = pos_stats.net_exposure
 
         payout = self._get_payout_total(pt.positions)
-
+        # print '$$$ ', self.starting_cash, self.cash_flow, self._total_intraperiod_capital_change, payout
         self.ending_cash = self.starting_cash + self.cash_flow + \
             self._total_intraperiod_capital_change + payout
 
@@ -360,7 +363,10 @@ class PerformancePeriod(object):
             self.orders_by_id[order.id] = order
 
     def handle_execution(self, txn):
+        # pdb.set_trace()
+        print 'HANDLE EXEC $$ ', self.cash_flow, txn.price
         self.cash_flow += self._calculate_execution_cash_flow(txn)
+        print 'HANDLE EXEC $$ -2- ', self.cash_flow
 
         asset = self.asset_finder.retrieve_asset(txn.sid)
         if isinstance(asset, Future):
@@ -402,6 +408,7 @@ class PerformancePeriod(object):
                 multiplier = 1
             self._execution_cash_flow_multipliers[txn.sid] = multiplier
 
+        print 'CLOSING IN... ', txn.sid,  txn.price, txn.amount, multiplier
         # Calculate and return the cash flow given the multiplier
         return -1 * txn.price * txn.amount * multiplier
 

@@ -776,6 +776,7 @@ class PanelBarReader(DailyBarReader):
     def __init__(self, trading_calendar, panel, data_frequency):
 
         panel = panel.copy()
+        # GD FIXME TODO interesting step below (not my code)
         if 'volume' not in panel.minor_axis:
             # Fake volume if it does not exist.
             panel.loc[:, :, 'volume'] = int(1e9)

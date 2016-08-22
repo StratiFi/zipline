@@ -151,6 +151,7 @@ def create_split(sid, ratio, date):
 
 
 def create_txn(sid, price, amount, datetime):
+    print 'IN CREATE TXN ', sid, amount, datetime, price
     txn = Event({
         'sid': sid,
         'amount': amount,
@@ -166,7 +167,7 @@ def create_txn_history(sid, priceList, amtList, interval, sim_params,
                        trading_calendar):
     txns = []
     current = sim_params.first_open
-
+    print 'TXNNN'
     for price, amount in zip(priceList, amtList):
         current = get_next_trading_dt(current, interval, trading_calendar)
 

@@ -22,6 +22,8 @@ from math import isnan
 from zipline.finance.performance.position import Position
 from zipline.finance.transaction import Transaction
 
+import pdb
+
 try:
     # optional cython based OrderedDict
     from cyordereddict import OrderedDict
@@ -60,10 +62,13 @@ def calc_position_values(amounts,
         last_sale_prices,
         itervalues(value_multipliers),
     )
-    return [
+    # print 'CALC POZ ---> ', iter_amount_price_multiplier
+    foo = [
         price * amount * multiplier for
         price, amount, multiplier in iter_amount_price_multiplier
     ]
+    # print 'FOO -> ', foo
+    return foo
 
 
 def calc_net(values):
@@ -134,16 +139,19 @@ class PositionTracker(object):
         self.data_frequency = data_frequency
 
     def _update_asset(self, sid):
+        # print 'sidddd= ', sid
         try:
+            # print 'i try, len= ', len(self._position_value_multipliers)
             self._position_value_multipliers[sid]
             self._position_exposure_multipliers[sid]
         except KeyError:
             # Check if there is an AssetFinder
             if self.asset_finder is None:
                 raise PositionTrackerMissingAssetFinder()
-
             # Collect the value multipliers from applicable sids
             asset = self.asset_finder.retrieve_asset(sid)
+            # print 'in except== ', isinstance(asset, Option), asset
+
             if isinstance(asset, Equity):
                 self._position_value_multipliers[sid] = 1
                 self._position_exposure_multipliers[sid] = 1
@@ -179,17 +187,22 @@ class PositionTracker(object):
             position.cost_basis = cost_basis
 
     def execute_transaction(self, txn):
+        print 'EXECCC ', txn.sid, txn.price, txn.amount
         # Update Position
         # ----------------
         sid = txn.sid
 
         if sid not in self.positions:
+            # GD print 'NOT IN ', sid
             position = Position(sid)
             self.positions[sid] = position
         else:
             position = self.positions[sid]
-
+        # GD print 'POOOO ', self.positions
+        # GD print 'EXECU ', sid, position
         position.update(txn)
+        # GD print 'EXECUPDATED ', sid, position
+        # GD print self._position_value_multipliers
 
         if position.amount == 0:
             # if this position now has 0 shares, remove it from our internal
@@ -198,8 +211,10 @@ class PositionTracker(object):
 
             # GD FIXING ISSUE OF MIXING MULTIPLE MULTIPLIERS
             # FIXME TODO check that this is ok forever..
+            # GD print 'FIXX ', len(self._position_value_multipliers), position.amount, self._position_value_multipliers
             del self._position_value_multipliers[sid]
             del self._position_exposure_multipliers[sid]
+            # GD print 'AFTER FIXX', len(self._position_value_multipliers), self._position_value_multipliers
 
             try:
                 # if this position exists in our user-facing dictionary,
@@ -207,8 +222,8 @@ class PositionTracker(object):
                 del self._positions_store[sid]
             except KeyError:
                 pass
-
-        self._update_asset(sid)
+        else:
+            self._update_asset(sid)
 
     def handle_commission(self, sid, cost):
         # Adjust the cost basis of the stock if we own it
@@ -320,6 +335,7 @@ class PositionTracker(object):
         return net_cash_payment
 
     def maybe_create_close_position_transaction(self, asset, dt, data_portal):
+        print 'MAYBE!'
         if not self.positions.get(asset):
             return None
 
@@ -330,7 +346,7 @@ class PositionTracker(object):
         # Get the last traded price if price is no longer available
         if isnan(price):
             price = self.positions.get(asset).last_sale_price
-
+        print 'ti PRICE', price
         txn = Transaction(
             sid=asset,
             amount=(-1 * amount),
@@ -405,12 +421,16 @@ class PositionTracker(object):
         for pos in itervalues(self.positions):
             amounts.append(pos.amount)
             last_sale_prices.append(pos.last_sale_price)
+        # print 'IN STATS ', amounts, last_sale_prices, len(self._position_value_multipliers)
+        if len(self._position_value_multipliers) > len (amounts):
+            print 'MISMATCH ', self._position_value_multipliers
 
         position_values = calc_position_values(
             amounts,
             last_sale_prices,
             self._position_value_multipliers
         )
+        # print 'AFTER POSVAL', position_values
         position_exposures = calc_position_exposures(
             amounts,
             last_sale_prices,
@@ -427,6 +447,8 @@ class PositionTracker(object):
         longs_count = calc_longs_count(position_exposures)
         shorts_count = calc_shorts_count(position_exposures)
         net_value = calc_net(position_values)
+        # print 'AAZ ', long_value, short_value, gross_value, long_exposure, short_exposure, gross_exposure, net_exposure,
+        # longs_count, shorts_count, net_value
 
         return PositionStats(
             long_value=long_value,

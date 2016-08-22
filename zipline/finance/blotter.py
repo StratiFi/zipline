@@ -89,6 +89,7 @@ class Blotter(object):
         StopLimit order: order(sid, amount, style=StopLimitOrder(limit_price,
                                stop_price))
         """
+        print 'IN BLOTTER ORDER ', amount, sid
         if amount == 0:
             # Don't bother placing orders for 0 shares.
             return
@@ -107,7 +108,7 @@ class Blotter(object):
             limit=style.get_limit_price(is_buy),
             id=order_id
         )
-
+        print 'IN BLOTTER ', order.amount, order.sid
         self.open_orders[order.sid].append(order)
         self.orders[order.id] = order
         self.new_orders.append(order)
@@ -298,7 +299,8 @@ class Blotter(object):
         closed_orders = []
         transactions = []
         commissions = []
-
+        # print 'THIS IS WHERE YOU SHOULD INVESTIGATE THE NANS. YOU SHOULD ALSO GIT PULL LATEST ZIPLINE IN CASE THEY ' \
+        #       'FIXED THIS BUG.............. !! GO MERGE ! ALSO, AMOUNT = 1 ?! bizarre'
         if self.open_orders:
             assets = self.asset_finder.retrieve_all(self.open_orders)
             asset_dict = {asset.sid: asset for asset in assets}
@@ -308,6 +310,8 @@ class Blotter(object):
 
                 for order, txn in \
                         self.slippage_func(bar_data, asset, asset_orders):
+                    # print '\n TXXN', txn.price, txn.amount, asset_orders, '--O--', asset
+                    # print 'HAAA', bar_data.current(asset, 'price')
                     additional_commission = \
                         self.commission.calculate(order, txn)
 
