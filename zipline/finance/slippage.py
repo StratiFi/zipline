@@ -154,7 +154,9 @@ class VolumeShareSlippage(SlippageModel):
         cur_volume = int(min(remaining_volume, abs(order.open_amount)))
 
         if cur_volume < 1:
-            return None, None
+            # GD we remove the volume restriction for options for now. TMP FIX
+            pass
+            #return None, None
 
         # tally the current amount into our total amount ordered.
         # total amount will be used to calculate price impact
