@@ -76,7 +76,7 @@ import logbook
 import numpy as np
 
 from collections import namedtuple
-from zipline.assets import Future
+from zipline.assets import Future, Option
 import pdb
 try:
     # optional cython based OrderedDict
@@ -364,9 +364,9 @@ class PerformancePeriod(object):
 
     def handle_execution(self, txn):
         # pdb.set_trace()
-        print 'HANDLE EXEC $$ ', self.cash_flow, txn.price
+        # print 'HANDLE EXEC $$ ', self.cash_flow, txn.price
         self.cash_flow += self._calculate_execution_cash_flow(txn)
-        print 'HANDLE EXEC $$ -2- ', self.cash_flow
+        # print 'HANDLE EXEC $$ -2- ', self.cash_flow
 
         asset = self.asset_finder.retrieve_asset(txn.sid)
         if isinstance(asset, Future):
@@ -404,11 +404,13 @@ class PerformancePeriod(object):
             # Futures experience no cash flow on transactions
             if isinstance(asset, Future):
                 multiplier = 0
+            elif isinstance(asset, Option):
+                multiplier = 100.
             else:
                 multiplier = 1
             self._execution_cash_flow_multipliers[txn.sid] = multiplier
 
-        print 'CLOSING IN... ', txn.sid,  txn.price, txn.amount, multiplier
+        # print 'CLOSING IN... ', txn.sid,  txn.price, txn.amount, multiplier
         # Calculate and return the cash flow given the multiplier
         return -1 * txn.price * txn.amount * multiplier
 

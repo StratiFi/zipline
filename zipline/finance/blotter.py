@@ -89,7 +89,7 @@ class Blotter(object):
         StopLimit order: order(sid, amount, style=StopLimitOrder(limit_price,
                                stop_price))
         """
-        print 'IN BLOTTER ORDER ', amount, sid
+        # print 'IN BLOTTER ORDER ', amount, sid
         if amount == 0:
             # Don't bother placing orders for 0 shares.
             return
@@ -108,7 +108,7 @@ class Blotter(object):
             limit=style.get_limit_price(is_buy),
             id=order_id
         )
-        print 'IN BLOTTER ', order.amount, order.sid
+        # print 'IN BLOTTER ', order.amount, order.sid
         self.open_orders[order.sid].append(order)
         self.orders[order.id] = order
         self.new_orders.append(order)
