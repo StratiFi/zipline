@@ -23,7 +23,7 @@ from pandas.tslib import normalize_date
 from six import iteritems
 from six.moves import reduce
 
-from zipline.assets import Asset, Future, Equity
+from zipline.assets import Asset, Future, Equity, Option
 from zipline.data.daily_history_aggregator import DailyHistoryAggregator
 from zipline.data.us_equity_pricing import NoDataOnDate
 from zipline.data.us_equity_loader import (
@@ -105,6 +105,8 @@ class DataPortal(object):
                  equity_minute_reader=None,
                  future_daily_reader=None,
                  future_minute_reader=None,
+                 option_daily_reader=None,
+                 option_minute_reader=None,
                  adjustment_reader=None):
 
         self.trading_calendar = trading_calendar
@@ -146,6 +148,8 @@ class DataPortal(object):
         self._equity_minute_reader = equity_minute_reader
         self._future_daily_reader = future_daily_reader
         self._future_minute_reader = future_minute_reader
+        self._option_daily_reader = option_daily_reader
+        self._option_minute_reader = option_minute_reader
 
         if self._equity_minute_reader is not None:
             self._equity_daily_aggregator = DailyHistoryAggregator(
@@ -287,6 +291,16 @@ class DataPortal(object):
             else:
                 path = "{0}/{1}.bcolz".format(
                     self._future_minute_reader.rootdir, sid)
+
+        elif isinstance(asset, Option):
+            if self._optiob_minute_reader.sid_path_func is not None:
+                path = self._option_minute_reader.sid_path_func(
+                    self._option_minute_reader.rootdir, sid
+                )
+            else:
+                path = "{0}/{1}.bcolz".format(
+                    self._option_minute_reader.rootdir, sid)
+
         elif isinstance(asset, Equity):
             if self._equity_minute_reader.sid_path_func is not None:
                 path = self._equity_minute_reader.sid_path_func(
@@ -397,6 +411,15 @@ class DataPortal(object):
                 else:
                     return self._get_minute_spot_value_future(
                         asset, field, dt)
+            elif isinstance(asset, Option):
+                # GD this is where I think now if close is nan, price is also gonna be nan --> might impact slippage.py quick fix
+                if field == "price":
+                    return self._get_minute_spot_value_option(
+                        asset, "close", dt)
+                else:
+                    return self._get_minute_spot_value_option(
+                        asset, field, dt)
+
             else:
                 if field == "last_traded":
                     return self._equity_minute_reader.get_last_traded_dt(
@@ -556,6 +579,37 @@ class DataPortal(object):
         else:
             return result
 
+    def _get_minute_spot_value_option(self, asset, column, dt):
+        # Option bcolz files have 1440 bars per day (24 hours), 7 days a week.
+        # The file attributes contain the "start_dt" and "last_dt" fields,
+        # which represent the time period for this bcolz file.
+
+        # The start_dt is midnight of the first day that this option started
+        # trading.
+
+        # figure out the # of minutes between dt and this asset's start_dt
+        start_date = self._get_asset_start_date(asset)
+        minute_offset = int((dt - start_date).total_seconds() / 60)
+
+        if minute_offset < 0:
+            # asking for a date that is before the asset's start date, no dice
+            return 0.0
+
+        # then just index into the bcolz carray at that offset
+        carray = self._open_minute_file(column, asset)
+        result = carray[minute_offset]
+
+        # if there's missing data, go backwards until we run out of file
+        while result == 0 and minute_offset > 0:
+            minute_offset -= 1
+            result = carray[minute_offset]
+
+        if column != 'volume':
+            # FIXME switch to a option reader
+            return result * 0.001
+        else:
+            return result
+
     def _get_minute_spot_value(self, asset, column, dt, ffill=False):
         result = self._equity_minute_reader.get_value(
             asset.sid, dt, column
@@ -668,11 +722,16 @@ class DataPortal(object):
                                 columns=None)
 
         future_data = []
+        option_data = []
         eq_assets = []
 
         for asset in assets:
             if isinstance(asset, Future):
                 future_data.append(self._get_history_daily_window_future(
+                    asset, days_for_window, end_dt, field_to_use
+                ))
+            elif isinstance(asset, Option):
+                option_data.append(self._get_history_daily_window_option(
                     asset, days_for_window, end_dt, field_to_use
                 ))
             else:
@@ -683,6 +742,9 @@ class DataPortal(object):
         if future_data:
             # TODO: This case appears to be uncovered by testing.
             data = np.concatenate(eq_data, np.array(future_data).T)
+        if option_data:
+            # TODO: This case appears to be uncovered by testing.
+            data = np.concatenate(data, np.array(option_data).T)
         else:
             data = eq_data
         return pd.DataFrame(
@@ -724,6 +786,63 @@ class DataPortal(object):
 
         for idx, minute in enumerate(last_day_minutes):
             minute_val = self._get_minute_spot_value_future(
+                asset, column, minute
+            )
+
+            values_for_last_day[idx] = minute_val
+
+        data_groups.append(values_for_last_day)
+
+        for group in data_groups:
+            if len(group) == 0:
+                continue
+
+            if column == 'volume':
+                data.append(np.sum(group))
+            elif column == 'open':
+                data.append(group[0])
+            elif column == 'close':
+                data.append(group[-1])
+            elif column == 'high':
+                data.append(np.amax(group))
+            elif column == 'low':
+                data.append(np.amin(group))
+
+        return data
+
+    def _get_history_daily_window_option(self, asset, days_for_window,
+                                         end_dt, column):
+        # Since we don't have daily bcolz files for futures (yet), use minute
+        # bars to calculate the daily values.
+        data = []
+        data_groups = []
+
+        # get all the minutes for the days NOT including today
+        for day in days_for_window[:-1]:
+            minutes = self.sessions_in_range.minutes_for_session(day)
+
+            values_for_day = np.zeros(len(minutes), dtype=np.float64)
+
+            for idx, minute in enumerate(minutes):
+                minute_val = self._get_minute_spot_value_option(
+                    asset, column, minute
+                )
+
+                values_for_day[idx] = minute_val
+
+            data_groups.append(values_for_day)
+
+        # get the minutes for today
+        last_day_minutes = pd.date_range(
+            start=self.trading_calendar.open_and_close_for_session(end_dt)[0],
+            end=end_dt,
+            freq="T"
+        )
+
+        values_for_last_day = np.zeros(len(last_day_minutes), dtype=np.float64)
+
+        for idx, minute in enumerate(last_day_minutes):
+            minute_val = self._get_minute_spot_value_option(
                 asset, column, minute
             )
 
@@ -949,6 +1068,9 @@ class DataPortal(object):
         if isinstance(assets, Future):
             return self._get_minute_window_for_future([assets], field,
                                                       minutes_for_window)
+        elif isinstance(assets, Option):
+            return self._get_minute_window_for_option([assets], field,
+                                                      minutes_for_window)
         else:
             # TODO: Make caller accept assets.
             window = self._get_minute_window_for_equities(assets, field,
@@ -963,6 +1085,23 @@ class DataPortal(object):
         for idx, minute in enumerate(minutes_for_window):
             return_data[idx] = \
                 self._get_minute_spot_value_future(asset, field, minute)
+
+        # Note: an improvement could be to find the consecutive runs within
+        # minutes_for_window, and use them to read the underlying ctable
+        # more efficiently.
+
+        # Once futures are on 24-hour clock, then we can just grab all the
+        # requested minutes in one shot from the ctable.
+
+        # no adjustments for futures, yay.
+        return return_data
+
+    def _get_minute_window_for_option(self, asset, field, minutes_for_window):
+        # based on the same function for futures for now.
+        return_data = np.zeros(len(minutes_for_window), dtype=np.float64)
+        for idx, minute in enumerate(minutes_for_window):
+            return_data[idx] = \
+                self._get_minute_spot_value_option(asset, field, minute)
 
         # Note: an improvement could be to find the consecutive runs within
         # minutes_for_window, and use them to read the underlying ctable
