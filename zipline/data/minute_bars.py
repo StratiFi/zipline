@@ -39,7 +39,6 @@ DEFAULT_EXPECTEDLEN = US_EQUITIES_MINUTES_PER_DAY * 252 * 15
 
 OHLC_RATIO = 1000
 
-
 class BcolzMinuteOverlappingData(Exception):
     pass
 
@@ -295,7 +294,7 @@ class BcolzMinuteBarWriter(object):
     --------
     zipline.data.minute_bars.BcolzMinuteBarReader
     """
-    COL_NAMES = ('open', 'high', 'low', 'close', 'volume')
+    COL_NAMES = ('open', 'high', 'low', 'close', 'volume', 'delta')
 
     def __init__(self,
                  first_trading_day,
@@ -390,6 +389,7 @@ class BcolzMinuteBarWriter(object):
             # Other sids may have already created the containing directory.
             os.makedirs(sid_containing_dirname)
         initial_array = np.empty(0, np.uint32)
+        initial_array_options = np.empty(0, np.int32)
         table = ctable(
             rootdir=path,
             columns=[
@@ -397,6 +397,7 @@ class BcolzMinuteBarWriter(object):
                 initial_array,
                 initial_array,
                 initial_array,
+                initial_array_options,
                 initial_array,
             ],
             names=[
@@ -404,6 +405,7 @@ class BcolzMinuteBarWriter(object):
                 'high',
                 'low',
                 'close',
+                'delta',
                 'volume'
             ],
             expectedlen=self._expectedlen,
@@ -489,11 +491,12 @@ class BcolzMinuteBarWriter(object):
         data : iterable[(int, pd.DataFrame)]
             The data to write. Each element should be a tuple of sid, data
             where data has the following format:
-              columns : ('open', 'high', 'low', 'close', 'volume')
+              columns : ('open', 'high', 'low', 'close', 'delta', 'volume')
                   open : float64
                   high : float64
                   low  : float64
                   close : float64
+                  delta : float64
                   volume : float64|int64
               index : DatetimeIndex of market minutes.
             A given sid may appear more than once in ``data``; however,
@@ -530,6 +533,7 @@ class BcolzMinuteBarWriter(object):
                 high : float64
                 low  : float64
                 close : float64
+                delta : float64
                 volume : float64|int64
             index : DatetimeIndex of market minutes.
         """
@@ -538,6 +542,7 @@ class BcolzMinuteBarWriter(object):
             'high': df.high.values,
             'low': df.low.values,
             'close': df.close.values,
+            'delta': df.delta.values,
             'volume': df.volume.values,
         }
         dts = df.index.values
@@ -614,6 +619,8 @@ class BcolzMinuteBarWriter(object):
         # Get the latest minute we wish to write to the ctable
         last_minute_to_write = dts[-1]
 
+        print 'ZZZZ'
+
         # In the event that we've already written some minutely data to the
         # ctable, guard against overwritting that data.
         if num_rec_mins > 0:
@@ -635,6 +642,7 @@ class BcolzMinuteBarWriter(object):
         high_col = np.zeros(minutes_count, dtype=np.uint32)
         low_col = np.zeros(minutes_count, dtype=np.uint32)
         close_col = np.zeros(minutes_count, dtype=np.uint32)
+        delta_col = np.zeros(minutes_count, dtype=np.int32)
         vol_col = np.zeros(minutes_count, dtype=np.uint32)
 
         dt_ixs = np.searchsorted(all_minutes_in_window.values,
@@ -642,15 +650,16 @@ class BcolzMinuteBarWriter(object):
 
         ohlc_ratio = self._ohlc_ratio
 
-        def convert_col(col):
+        def convert_col(col, thetype=np.uint32):
             """Adapt float column into a uint32 column.
             """
-            return (np.nan_to_num(col) * ohlc_ratio).astype(np.uint32)
+            return (np.nan_to_num(col) * ohlc_ratio).astype(thetype)
 
         open_col[dt_ixs] = convert_col(cols['open'])
         high_col[dt_ixs] = convert_col(cols['high'])
         low_col[dt_ixs] = convert_col(cols['low'])
         close_col[dt_ixs] = convert_col(cols['close'])
+        delta_col[dt_ixs] = convert_col(cols['delta'], np.int32)
         vol_col[dt_ixs] = cols['volume'].astype(np.uint32)
 
         table.append([
@@ -658,6 +667,7 @@ class BcolzMinuteBarWriter(object):
             high_col,
             low_col,
             close_col,
+            delta_col,
             vol_col
         ])
         table.flush()
@@ -677,7 +687,7 @@ class BcolzMinuteBarReader(object):
     --------
     zipline.data.minute_bars.BcolzMinuteBarWriter
     """
-    FIELDS = ('open', 'high', 'low', 'close', 'volume')
+    FIELDS = ('open', 'high', 'low', 'close', 'delta', 'volume')
 
     def __init__(self, rootdir, sid_cache_size=1000):
         self._rootdir = rootdir
@@ -827,7 +837,7 @@ class BcolzMinuteBarReader(object):
             The datetime at which the trade occurred.
         field : string
             The type of pricing data to retrieve.
-            ('open', 'high', 'low', 'close', 'volume')
+            ('open', 'high', 'low', 'close', 'delta', 'volume')
 
         Returns:
         --------
@@ -926,7 +936,7 @@ class BcolzMinuteBarReader(object):
         Parameters
         ----------
         fields : list of str
-           'open', 'high', 'low', 'close', or 'volume'
+           'open', 'high', 'low', 'close', 'delta', or 'volume'
         start_dt: Timestamp
            Beginning of the window range.
         end_dt: Timestamp

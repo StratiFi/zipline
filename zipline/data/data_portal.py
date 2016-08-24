@@ -50,11 +50,11 @@ BASE_FIELDS = frozenset([
 ])
 
 OHLCV_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume"
+    "open", "high", "low", "close", "volume", "delta"
 ])
 
 OHLCVP_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume", "price"
+    "open", "high", "low", "close", "volume", "price", "delta"
 ])
 
 HISTORY_FREQUENCIES = set(["1m", "1d"])
