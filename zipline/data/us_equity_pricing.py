@@ -1352,10 +1352,9 @@ class SQLiteAdjustmentReader(object):
         seconds = date.value / int(1e9)
         c = self.conn.cursor()
 
-
         divs = []
         # TODO GD REMOVE !!! HACK FOR TESTS!
-        return divs
+        # return divs
 
         for chunk in group_into_chunks(assets):
             query = UNPAID_QUERY_TEMPLATE.format(
@@ -1371,7 +1370,8 @@ class SQLiteAdjustmentReader(object):
                     row[1], Timestamp(row[2], unit='s', tz='UTC'))
                 divs.append(div)
         c.close()
-
+        if divs:
+            print 'DIVS: ', divs
         return divs
 
     def get_stock_dividends_with_ex_date(self, assets, date, asset_finder):

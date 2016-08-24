@@ -71,7 +71,7 @@ def yahoo_equities(symbols, start=None, end=None):
             start = calendar[0]
         if end is None:
             end = None
-
+        print 'IN YAHOO INGEST ', symbols
         metadata = pd.DataFrame(np.empty(len(symbols), dtype=[
             ('start_date', 'datetime64[ns]'),
             ('end_date', 'datetime64[ns]'),
@@ -170,7 +170,8 @@ def yahoo_equities(symbols, start=None, end=None):
         # we do not have this data in the yahoo dataset
         dividends['record_date'] = pd.NaT
         dividends['declared_date'] = pd.NaT
-        dividends['pay_date'] = pd.NaT
+        #dividends['pay_date'] = pd.NaT
+        dividends['pay_date'] = dividends['ex_date']
 
         adjustment_writer.write(splits=splits, dividends=dividends)
 

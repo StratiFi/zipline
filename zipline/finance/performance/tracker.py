@@ -70,6 +70,8 @@ import zipline.finance.risk as risk
 
 from . position_tracker import PositionTracker
 
+from zipline.assets import Equity
+
 log = logbook.Logger('Performance')
 
 
@@ -309,6 +311,10 @@ class PerformanceTracker(object):
         # Dividends whose ex_date is the next trading day.  We need to check if
         # we own any of these stocks so we know to pay them out when the pay
         # date comes.
+
+        for a in held_sids.copy():
+            if not isinstance(a, Equity):
+                held_sids.remove(a)
 
         if held_sids:
             cash_dividends = adjustment_reader.get_dividends_with_ex_date(

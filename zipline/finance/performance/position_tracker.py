@@ -187,22 +187,16 @@ class PositionTracker(object):
             position.cost_basis = cost_basis
 
     def execute_transaction(self, txn):
-        print 'EXECCC ', txn.sid, txn.price, txn.amount
         # Update Position
         # ----------------
         sid = txn.sid
 
         if sid not in self.positions:
-            # GD print 'NOT IN ', sid
             position = Position(sid)
             self.positions[sid] = position
         else:
             position = self.positions[sid]
-        # GD print 'POOOO ', self.positions
-        # GD print 'EXECU ', sid, position
         position.update(txn)
-        # GD print 'EXECUPDATED ', sid, position
-        # GD print self._position_value_multipliers
 
         if position.amount == 0:
             # if this position now has 0 shares, remove it from our internal
@@ -211,10 +205,8 @@ class PositionTracker(object):
 
             # GD FIXING ISSUE OF MIXING MULTIPLE MULTIPLIERS
             # FIXME TODO check that this is ok forever..
-            # GD print 'FIXX ', len(self._position_value_multipliers), position.amount, self._position_value_multipliers
             del self._position_value_multipliers[sid]
             del self._position_exposure_multipliers[sid]
-            # GD print 'AFTER FIXX', len(self._position_value_multipliers), self._position_value_multipliers
 
             try:
                 # if this position exists in our user-facing dictionary,

@@ -283,7 +283,6 @@ class PerformancePeriod(object):
         self.adjust_cash(-cost)
 
     def adjust_cash(self, amount):
-        print 'ADJ ', amount, self.cash_flow
         self.cash_flow += amount
 
     def adjust_field(self, field, value):

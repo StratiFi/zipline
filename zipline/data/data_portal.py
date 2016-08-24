@@ -669,6 +669,7 @@ class DataPortal(object):
 
     def _get_daily_data(self, asset, column, dt):
         # GD TODO FIXME at some point, do a if isinstance(Option) check and have specific self._option_daily_reader hook
+        # and/or simply rename those to _asset_daily_reader and do a couple isinstance checks
         if column == "last_traded":
             last_traded_dt = \
                 self._equity_daily_reader.get_last_traded_dt(asset, dt)

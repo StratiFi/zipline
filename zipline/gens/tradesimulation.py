@@ -19,6 +19,8 @@ from zipline.protocol import BarData
 from zipline.utils.api_support import ZiplineAPI
 from six import viewkeys
 
+from zipline.assets import Equity
+
 from zipline.gens.sim_engine import (
     BAR,
     SESSION_START,
@@ -120,7 +122,6 @@ class AlgorithmSimulator(object):
             blotter.prune_orders(closed_orders)
 
             for transaction in new_transactions:
-                print 'TRANSAC IN NEW T', transaction.price, transaction.amount
                 perf_tracker.process_transaction(transaction)
 
                 # since this order was modified, record it
@@ -177,8 +178,13 @@ class AlgorithmSimulator(object):
                 viewkeys(perf_tracker.position_tracker.positions) | \
                 viewkeys(algo.blotter.open_orders)
 
+            for a in assets_we_care_about.copy():
+                if not isinstance(a, Equity):
+                    assets_we_care_about.remove(a)
+
+
             # TODO GD REMOVE THE NOT !!! TMP HACK !!!
-            if not assets_we_care_about:
+            if assets_we_care_about:
                 splits = data_portal.get_splits(assets_we_care_about,
                                                 midnight_dt)
                 if splits:
