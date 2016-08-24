@@ -1043,7 +1043,6 @@ class AssetFinder(object):
             root symbol.
         """
         option_type = sa.text('\'' + option_type + '\'')
-
         fc_cols = self.options_contracts.c
         desired_expiration_date_timestamp = pd.Timestamp(desired_minimum_expiration_date).value
         desired_min_trading_date_timestamp = pd.Timestamp(current_date).value

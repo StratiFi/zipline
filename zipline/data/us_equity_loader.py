@@ -82,7 +82,7 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
     adjustment_reader : SQLiteAdjustmentReader
         Reader for adjustment data.
     """
-    FIELDS = ('open', 'high', 'low', 'close', 'volume')
+    FIELDS = ('open', 'high', 'low', 'close', 'delta', 'volume')
 
     def __init__(self, trading_calendar, reader, adjustment_reader,
                  sid_cache_size=1000):

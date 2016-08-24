@@ -17,6 +17,8 @@ from operator import mul
 import bcolz
 from logbook import Logger
 
+import pdb
+
 import numpy as np
 import pandas as pd
 from pandas.tslib import normalize_date
@@ -46,15 +48,15 @@ from zipline.errors import (
 log = Logger('DataPortal')
 
 BASE_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume", "price", "last_traded"
+    "open", "high", "low", "close", "volume", "delta", "price", "last_traded"
 ])
 
 OHLCV_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume", "delta"
+    "open", "high", "low", "close", "delta", "volume"
 ])
 
 OHLCVP_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume", "price", "delta"
+    "open", "high", "low", "close", "delta", "volume", "price"
 ])
 
 HISTORY_FREQUENCIES = set(["1m", "1d"])
@@ -119,6 +121,7 @@ class DataPortal(object):
             'high': {},
             'low': {},
             'close': {},
+            'delta': {},
             'volume': {},
             'sid': {},
         }
@@ -320,7 +323,6 @@ class DataPortal(object):
             else:
                 path = "{0}/{1}.bcolz".format(
                     self._equity_minute_reader.rootdir, sid)
-
         return bcolz.open(path, mode='r')
 
     def get_last_traded_dt(self, asset, dt, data_frequency):
@@ -611,6 +613,7 @@ class DataPortal(object):
             return result
 
     def _get_minute_spot_value(self, asset, column, dt, ffill=False):
+
         result = self._equity_minute_reader.get_value(
             asset.sid, dt, column
         )
