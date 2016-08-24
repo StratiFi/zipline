@@ -73,14 +73,19 @@ import pdb
 logger = logbook.Logger('UsEquityPricing')
 
 OHLC = frozenset(['open', 'high', 'low', 'close'])
+
+# fields that don't have the *1000 (OHLC_RATIO) factor
+PLAIN_FIELDS = frozenset(['volume', 'open_interest'])
+
 US_EQUITY_PRICING_BCOLZ_COLUMNS = (
     'open', 'high', 'low', 'close', 'volume', 'day', 'id'
 )
 US_EQUITY_AND_OPTION_PRICING_BCOLZ_COLUMNS = (
-    'open', 'high', 'low', 'close', 'delta', 'volume', 'day', 'id'
+    'open', 'high', 'low', 'close', 'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho',
+    'volume', 'day', 'id'
 )
 US_OPTION_PRICING_BCOLZ_COLUMNS = (
-    'delta',
+    'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho',
 )
 
 SQLITE_ADJUSTMENT_COLUMN_DTYPES = {
@@ -188,8 +193,18 @@ def to_ctable(raw_data, invalid_data_behavior):
     check_uint32_safe(dates.max().view(np.int64), 'day')
     processed['day'] = dates.astype('uint32')
     processed['volume'] = raw_data.volume.astype('uint32')
+
+    # case of options. Ideally, make separate functions / switch cases
     try:
+        processed['open_interest'] = raw_data.open_interest.astype('uint32')
+        processed['bid'] = (raw_data.bid * OHLC_RATIO).astype(numpy.int32)
+        processed['ask'] = (raw_data.ask * OHLC_RATIO).astype(numpy.int32)
         processed['delta'] = (raw_data.delta * OHLC_RATIO).astype(numpy.int32)
+        processed['gamma'] = (raw_data.gamma * OHLC_RATIO).astype(numpy.int32)
+        processed['theta'] = (raw_data.theta * OHLC_RATIO).astype(numpy.int32)
+        processed['vega'] = (raw_data.vega * OHLC_RATIO).astype(numpy.int32)
+        processed['rho'] = (raw_data.rho * OHLC_RATIO).astype(numpy.int32)
+        processed['iv'] = (raw_data.iv * OHLC_RATIO).astype(numpy.int32)
     except:
         pass
     return ctable.fromdataframe(processed)
@@ -220,8 +235,16 @@ class BcolzDailyBarWriter(object):
         'high': float64,
         'low': float64,
         'close': float64,
-        'volume': float64,
+        'bid': float64,
+        'ask': float64,
+        'open_interest': float64,
+        'iv': float64,
         'delta': float64,
+        'gamma': float64,
+        'theta': float64,
+        'vega': float64,
+        'rho': float64,
+        'volume': float64,
     }
 
     def __init__(self, filename, calendar, start_session, end_session):
@@ -778,7 +801,7 @@ class BcolzDailyBarReader(DailyBarReader):
         price = self._spot_col(colname)[ix]
         if price == 0:
             return -1
-        if colname != 'volume':
+        if colname not in PLAIN_FIELDS:
             return price * 0.001
         else:
             return price

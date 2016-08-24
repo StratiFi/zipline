@@ -21,8 +21,16 @@ class DailyBarWriterFromDataFrames(BcolzDailyBarWriter):
         'high': float64,
         'low': float64,
         'close': float64,
-        'volume': float64,
+        'bid': float64,
+        'ask': float64,
+        'open_interest': float64,
+        'iv': float64,
         'delta': float64,
+        'gamma': float64,
+        'theta': float64,
+        'vega': float64,
+        'rho': float64,
+        'volume': float64,
     }
 
     def __init__(self, asset_map):

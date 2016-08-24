@@ -322,7 +322,6 @@ cdef class BarData:
 
             if not multiple_fields:
                 field = fields
-
                 # return scalar value
                 if not self._adjust_minutes:
                     return self.data_portal.get_spot_value(

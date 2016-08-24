@@ -294,7 +294,8 @@ class BcolzMinuteBarWriter(object):
     --------
     zipline.data.minute_bars.BcolzMinuteBarReader
     """
-    COL_NAMES = ('open', 'high', 'low', 'close', 'volume', 'delta')
+    COL_NAMES = ('open', 'high', 'low', 'close', 'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta',
+                 'vega', 'rho',)
 
     def __init__(self,
                  first_trading_day,
@@ -405,7 +406,15 @@ class BcolzMinuteBarWriter(object):
                 'high',
                 'low',
                 'close',
+                'bid',
+                'ask',
+                'open_interest',
+                'iv',
                 'delta',
+                'gamma',
+                'theta',
+                'vega',
+                'rho'
                 'volume'
             ],
             expectedlen=self._expectedlen,
@@ -491,13 +500,15 @@ class BcolzMinuteBarWriter(object):
         data : iterable[(int, pd.DataFrame)]
             The data to write. Each element should be a tuple of sid, data
             where data has the following format:
-              columns : ('open', 'high', 'low', 'close', 'delta', 'volume')
+              columns : ('open', 'high', 'low', 'close', 'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta',
+                 'vega', 'rho', 'volume')
                   open : float64
                   high : float64
                   low  : float64
                   close : float64
-                  delta : float64
+                  greeks and iv : float64
                   volume : float64|int64
+                  open_interest : int64
               index : DatetimeIndex of market minutes.
             A given sid may appear more than once in ``data``; however,
             the dates must be strictly increasing.
@@ -542,7 +553,15 @@ class BcolzMinuteBarWriter(object):
             'high': df.high.values,
             'low': df.low.values,
             'close': df.close.values,
+            'bid': df.bid.values,
+            'ask': df.ask.values,
+            'open_interest': df.open_interest.values,
+            'iv': df.iv.values,
             'delta': df.delta.values,
+            'gamma': df.gamma.values,
+            'theta': df.theta.values,
+            'vega': df.vega.values,
+            'rho': df.rho.values,
             'volume': df.volume.values,
         }
         dts = df.index.values
@@ -642,7 +661,15 @@ class BcolzMinuteBarWriter(object):
         high_col = np.zeros(minutes_count, dtype=np.uint32)
         low_col = np.zeros(minutes_count, dtype=np.uint32)
         close_col = np.zeros(minutes_count, dtype=np.uint32)
+        bid_col = np.zeros(minutes_count, dtype=np.uint32)
+        ask_col = np.zeros(minutes_count, dtype=np.uint32)
+        open_interest_col = np.zeros(minutes_count, dtype=np.uint32)
+        iv_col = np.zeros(minutes_count, dtype=np.int32)
         delta_col = np.zeros(minutes_count, dtype=np.int32)
+        gamma_col = np.zeros(minutes_count, dtype=np.int32)
+        theta_col = np.zeros(minutes_count, dtype=np.int32)
+        vega_col = np.zeros(minutes_count, dtype=np.int32)
+        rho_col = np.zeros(minutes_count, dtype=np.int32)
         vol_col = np.zeros(minutes_count, dtype=np.uint32)
 
         dt_ixs = np.searchsorted(all_minutes_in_window.values,
@@ -659,7 +686,16 @@ class BcolzMinuteBarWriter(object):
         high_col[dt_ixs] = convert_col(cols['high'])
         low_col[dt_ixs] = convert_col(cols['low'])
         close_col[dt_ixs] = convert_col(cols['close'])
+        bid_col[dt_ixs] = convert_col(cols['bid'])
+        ask_col[dt_ixs] = convert_col(cols['ask'])
+        iv_col[dt_ixs] = convert_col(cols['iv'], np.int32)
         delta_col[dt_ixs] = convert_col(cols['delta'], np.int32)
+        gamma_col[dt_ixs] = convert_col(cols['gamma'], np.int32)
+        theta_col[dt_ixs] = convert_col(cols['theta'], np.int32)
+        vega_col[dt_ixs] = convert_col(cols['vega'], np.int32)
+        rho_col[dt_ixs] = convert_col(cols['rho'], np.int32)
+
+        open_interest_col[dt_ixs] = cols['open_interest'].astype(np.uint32)
         vol_col[dt_ixs] = cols['volume'].astype(np.uint32)
 
         table.append([
@@ -667,7 +703,15 @@ class BcolzMinuteBarWriter(object):
             high_col,
             low_col,
             close_col,
+            bid_col,
+            ask_col,
+            open_interest_col,
+            iv_col,
             delta_col,
+            gamma_col,
+            theta_col,
+            vega_col,
+            rho_col,
             vol_col
         ])
         table.flush()
@@ -687,7 +731,8 @@ class BcolzMinuteBarReader(object):
     --------
     zipline.data.minute_bars.BcolzMinuteBarWriter
     """
-    FIELDS = ('open', 'high', 'low', 'close', 'delta', 'volume')
+    FIELDS = ('open', 'high', 'low', 'close', 'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta','vega',
+              'rho', 'volume')
 
     def __init__(self, rootdir, sid_cache_size=1000):
         self._rootdir = rootdir

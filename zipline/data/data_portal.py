@@ -45,18 +45,23 @@ from zipline.errors import (
     HistoryWindowStartsBeforeData,
 )
 
+from minute_bars import OHLC_RATIO
+
 log = Logger('DataPortal')
 
 BASE_FIELDS = frozenset([
-    "open", "high", "low", "close", "volume", "delta", "price", "last_traded"
+    "open", "high", "low", "close", "bid", "ask", "open_interest", "iv", "delta", "gamma", "theta", "vega", "rho",
+    "volume", "price", "last_traded"
 ])
 
 OHLCV_FIELDS = frozenset([
-    "open", "high", "low", "close", "delta", "volume"
+    "open", "high", "low", "close", "bid", "ask", "open_interest", "iv", "delta", "gamma", "theta", "vega", "rho",
+    "volume"
 ])
 
 OHLCVP_FIELDS = frozenset([
-    "open", "high", "low", "close", "delta", "volume", "price"
+    "open", "high", "low", "close", "bid", "ask", "open_interest", "iv", "delta", "gamma", "theta", "vega", "rho",
+    "volume", "price"
 ])
 
 HISTORY_FREQUENCIES = set(["1m", "1d"])
@@ -121,7 +126,15 @@ class DataPortal(object):
             'high': {},
             'low': {},
             'close': {},
+            'bid': {},
+            'ask': {},
+            'open_interest': {},
+            'iv': {},
             'delta': {},
+            'gamma': {},
+            'theta': {},
+            'vega': {},
+            'rho': {},
             'volume': {},
             'sid': {},
         }
@@ -385,6 +398,7 @@ class DataPortal(object):
             ``field`` is 'volume' the value will be a int. If the ``field`` is
             'last_traded' the value will be a Timestamp.
         """
+
         if self._is_extra_source(asset, field, self._augmented_sources_map):
             return self._get_fetcher_value(asset, field, dt)
 
@@ -577,7 +591,7 @@ class DataPortal(object):
 
         if column != 'volume':
             # FIXME switch to a futures reader
-            return result * 0.001
+            return result * 1. / float(OHLC_RATIO)
         else:
             return result
 
@@ -606,9 +620,9 @@ class DataPortal(object):
             minute_offset -= 1
             result = carray[minute_offset]
 
-        if column != 'volume':
+        if (column != 'volume') and (column != 'open_interest'):
             # FIXME switch to a option reader
-            return result * 0.001
+            return result * 1./float(OHLC_RATIO)
         else:
             return result
 
@@ -618,7 +632,7 @@ class DataPortal(object):
             asset.sid, dt, column
         )
 
-        if column == "volume":
+        if column == "volume" or column == "open_interest":
             if result == 0:
                 return 0
         elif not ffill or not np.isnan(result):
@@ -654,6 +668,7 @@ class DataPortal(object):
         )
 
     def _get_daily_data(self, asset, column, dt):
+        # GD TODO FIXME at some point, do a if isinstance(Option) check and have specific self._option_daily_reader hook
         if column == "last_traded":
             last_traded_dt = \
                 self._equity_daily_reader.get_last_traded_dt(asset, dt)
