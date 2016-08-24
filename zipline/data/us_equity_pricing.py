@@ -64,6 +64,10 @@ from zipline.utils.memoize import lazyval
 from zipline.utils.cli import maybe_show_progress
 from ._equities import _compute_row_slices, _read_bcolz_data
 from ._adjustments import load_adjustments_from_sqlite
+from minute_bars import OHLC_RATIO
+
+import numpy
+import pdb
 
 
 logger = logbook.Logger('UsEquityPricing')
@@ -72,6 +76,13 @@ OHLC = frozenset(['open', 'high', 'low', 'close'])
 US_EQUITY_PRICING_BCOLZ_COLUMNS = (
     'open', 'high', 'low', 'close', 'volume', 'day', 'id'
 )
+US_EQUITY_AND_OPTION_PRICING_BCOLZ_COLUMNS = (
+    'open', 'high', 'low', 'close', 'delta', 'volume', 'day', 'id'
+)
+US_OPTION_PRICING_BCOLZ_COLUMNS = (
+    'delta',
+)
+
 SQLITE_ADJUSTMENT_COLUMN_DTYPES = {
     'effective_date': integer,
     'ratio': float,
@@ -98,6 +109,7 @@ SQLITE_STOCK_DIVIDEND_PAYOUT_COLUMN_DTYPES = {
     'ratio': float,
 }
 UINT32_MAX = iinfo(uint32).max
+INT32_MAX = iinfo(numpy.int32).max
 
 
 class NoDataOnDate(Exception):
@@ -170,13 +182,16 @@ def to_ctable(raw_data, invalid_data_behavior):
     if isinstance(raw_data, ctable):
         # we already have a ctable so do nothing
         return raw_data
-
     winsorise_uint32(raw_data, invalid_data_behavior, 'volume', *OHLC)
-    processed = (raw_data[list(OHLC)] * 1000).astype('uint32')
+    processed = (raw_data[list(OHLC)] * OHLC_RATIO).astype('uint32')
     dates = raw_data.index.values.astype('datetime64[s]')
     check_uint32_safe(dates.max().view(np.int64), 'day')
     processed['day'] = dates.astype('uint32')
     processed['volume'] = raw_data.volume.astype('uint32')
+    try:
+        processed['delta'] = (raw_data.delta * OHLC_RATIO).astype(numpy.int32)
+    except:
+        pass
     return ctable.fromdataframe(processed)
 
 
@@ -206,6 +221,7 @@ class BcolzDailyBarWriter(object):
         'low': float64,
         'close': float64,
         'volume': float64,
+        'delta': float64,
     }
 
     def __init__(self, filename, calendar, start_session, end_session):
@@ -266,7 +282,9 @@ class BcolzDailyBarWriter(object):
             label=self.progress_bar_message,
             length=len(assets) if assets is not None else None,
         )
+        # pdb.set_trace()
         with ctx as it:
+            # pdb.set_trace()
             return self._write_internal(it, assets)
 
     def write_csvs(self,
@@ -305,6 +323,7 @@ class BcolzDailyBarWriter(object):
 
         `iterator` should be an iterator yielding pairs of (asset, ctable).
         """
+        # pdb.set_trace()
         total_rows = 0
         first_row = {}
         last_row = {}
@@ -315,6 +334,12 @@ class BcolzDailyBarWriter(object):
             k: carray(array([], dtype=uint32))
             for k in US_EQUITY_PRICING_BCOLZ_COLUMNS
         }
+        option_columns = {
+            k: carray(array([], dtype=numpy.int32))
+            for k in US_OPTION_PRICING_BCOLZ_COLUMNS
+        }
+        columns.update(option_columns)
+
 
         earliest_date = None
         sessions = self._calendar.sessions_in_range(
@@ -330,6 +355,7 @@ class BcolzDailyBarWriter(object):
                     yield asset_id, table
 
         for asset_id, table in iterator:
+            # pdb.set_trace()
             nrows = len(table)
             for column_name in columns:
                 if column_name == 'id':
@@ -338,6 +364,16 @@ class BcolzDailyBarWriter(object):
                     columns['id'].append(
                         full((nrows,), asset_id, dtype='uint32'),
                     )
+                    continue
+                elif column_name in US_OPTION_PRICING_BCOLZ_COLUMNS:
+                    try:
+                        columns[column_name].append(table[column_name])
+                    except NameError:
+                    # We know what the content of this column is, so don't
+                    # bother reading it.
+                        columns[column_name].append(
+                            full((nrows,), -999, dtype=numpy.int32),
+                        )
                     continue
 
                 columns[column_name].append(table[column_name])
@@ -372,17 +408,17 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in US_EQUITY_PRICING_BCOLZ_COLUMNS
+                for colname in US_EQUITY_AND_OPTION_PRICING_BCOLZ_COLUMNS
             ],
-            names=US_EQUITY_PRICING_BCOLZ_COLUMNS,
+            names=US_EQUITY_AND_OPTION_PRICING_BCOLZ_COLUMNS,
             rootdir=self._filename,
             mode='w',
         )
+        # pdb.set_trace()
 
         full_table.attrs['first_trading_day'] = (
             earliest_date if earliest_date is not None else iNaT
         )
-        print 'TABLE WRITTEN'
         full_table.attrs['first_row'] = first_row
         full_table.attrs['last_row'] = last_row
         full_table.attrs['calendar_offset'] = calendar_offset

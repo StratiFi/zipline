@@ -8,9 +8,12 @@ from bcolz import ctable
 from zipline.data.us_equity_pricing import (
     BcolzDailyBarWriter,
     OHLC,
-    UINT32_MAX
+    US_OPTION_PRICING_BCOLZ_COLUMNS,
+    UINT32_MAX,
+    INT32_MAX,
 )
 
+import numpy
 
 class DailyBarWriterFromDataFrames(BcolzDailyBarWriter):
     _csv_dtypes = {
@@ -19,6 +22,7 @@ class DailyBarWriterFromDataFrames(BcolzDailyBarWriter):
         'low': float64,
         'close': float64,
         'volume': float64,
+        'delta': float64,
     }
 
     def __init__(self, asset_map):
@@ -45,6 +49,19 @@ class DailyBarWriterFromDataFrames(BcolzDailyBarWriter):
     @staticmethod
     def check_uint_safe(value, colname):
         if value >= UINT32_MAX:
+            raise ValueError(
+                "Value %s from column '%s' is too large" % (value, colname)
+            )
+
+    def to_int32(self, array, colname):
+        arrmax = array.max()
+        if colname in US_OPTION_PRICING_BCOLZ_COLUMNS:
+            self.check_int_safe(arrmax * 1000, colname)
+            return (array * 1000).astype(numpy.int32)
+
+    @staticmethod
+    def check_int_safe(value, colname):
+        if value >= INT32_MAX:
             raise ValueError(
                 "Value %s from column '%s' is too large" % (value, colname)
             )
