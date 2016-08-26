@@ -171,7 +171,9 @@ def yahoo_equities(symbols, start=None, end=None):
         dividends['record_date'] = pd.NaT
         dividends['declared_date'] = pd.NaT
         #dividends['pay_date'] = pd.NaT
-        dividends['pay_date'] = dividends['ex_date']
+        # GD for the yahoo bundle we force-set the pay_date to be 12 days after ex_date (accurate for SPY)
+        print 'HACK GD -- !!!'
+        dividends['pay_date'] = dividends['ex_date'] + 86400 * 12
 
         adjustment_writer.write(splits=splits, dividends=dividends)
 

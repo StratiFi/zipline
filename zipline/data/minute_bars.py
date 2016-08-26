@@ -638,8 +638,6 @@ class BcolzMinuteBarWriter(object):
         # Get the latest minute we wish to write to the ctable
         last_minute_to_write = dts[-1]
 
-        print 'ZZZZ'
-
         # In the event that we've already written some minutely data to the
         # ctable, guard against overwritting that data.
         if num_rec_mins > 0:

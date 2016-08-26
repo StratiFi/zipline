@@ -218,7 +218,6 @@ class PerformancePeriod(object):
             raise ValueError("position_tracker can not be None")
         self._position_tracker = obj
         # we only calculate perf once we inject PositionTracker
-        print 'WWW $$ ', self.cash_flow
         self.calculate_performance()
 
     def adjust_period_starting_capital(self, capital_change):

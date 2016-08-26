@@ -762,6 +762,7 @@ class BcolzDailyBarReader(DailyBarReader):
         try:
             day_loc = self.sessions.get_loc(day)
         except:
+            print day, self.sessions, 'OOP'
             raise NoDataOnDate("day={0} is outside of calendar={1}".format(
                 day, self.sessions))
 
@@ -799,6 +800,7 @@ class BcolzDailyBarReader(DailyBarReader):
         """
         ix = self.sid_day_index(sid, day)
         price = self._spot_col(colname)[ix]
+
         if price == 0:
             return -1
         if colname not in PLAIN_FIELDS:

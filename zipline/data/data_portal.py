@@ -406,7 +406,6 @@ class DataPortal(object):
             raise KeyError("Invalid column: " + str(field))
 
         session_label = self.trading_calendar.minute_to_session_label(dt)
-
         if dt < asset.start_date or \
                 (data_frequency == "daily" and
                     session_label > asset.end_date) or \
@@ -416,6 +415,7 @@ class DataPortal(object):
                 return 0
             elif field != "last_traded":
                 return np.NaN
+
 
         if data_frequency == "daily":
             return self._get_daily_data(asset, field, session_label)
@@ -670,6 +670,7 @@ class DataPortal(object):
     def _get_daily_data(self, asset, column, dt):
         # GD TODO FIXME at some point, do a if isinstance(Option) check and have specific self._option_daily_reader hook
         # and/or simply rename those to _asset_daily_reader and do a couple isinstance checks
+
         if column == "last_traded":
             last_traded_dt = \
                 self._equity_daily_reader.get_last_traded_dt(asset, dt)
@@ -690,6 +691,7 @@ class DataPortal(object):
                 else:
                     return val
             except NoDataOnDate:
+                print 'NO DATA ON !!! KJK ', NoDataOnDate
                 return np.nan
         elif column == "price":
             found_dt = dt
