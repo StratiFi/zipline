@@ -713,6 +713,7 @@ class BcolzDailyBarReader(DailyBarReader):
             Full read array of the carray in the daily_bar_table with the
             given colname.
         """
+        # print 'DUDE!'
         try:
             col = self._spot_cols[colname]
         except KeyError:
@@ -762,7 +763,6 @@ class BcolzDailyBarReader(DailyBarReader):
         try:
             day_loc = self.sessions.get_loc(day)
         except:
-            print day, self.sessions, 'OOP'
             raise NoDataOnDate("day={0} is outside of calendar={1}".format(
                 day, self.sessions))
 
@@ -798,8 +798,11 @@ class BcolzDailyBarReader(DailyBarReader):
             Returns -1 if the day is within the date range, but the price is
             0.
         """
+        # print 'ZZZZZZO ', sid, day, colname
         ix = self.sid_day_index(sid, day)
+        # print 'ix=  ',ix
         price = self._spot_col(colname)[ix]
+        # print 'prr= ', price
 
         if price == 0:
             return -1

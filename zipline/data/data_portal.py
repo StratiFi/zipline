@@ -691,7 +691,7 @@ class DataPortal(object):
                 else:
                     return val
             except NoDataOnDate:
-                print 'NO DATA ON !!! KJK ', NoDataOnDate
+                # print 'KJK ', asset, dt, column
                 return np.nan
         elif column == "price":
             found_dt = dt
