@@ -1010,7 +1010,8 @@ class AssetFinder(object):
         return [contracts[sid] for sid in sids]
 
 
-    def lookup_option_links(self, root_symbol, current_date, option_type, desired_strike, desired_minimum_expiration_date, num_contracts_to_return):
+    def lookup_option_links(self, root_symbol, current_date, option_type, desired_strike,
+                            desired_minimum_expiration_date, num_contracts_to_return, num_expiration_dates=2):
         """ Return an extract of the options chain for a given root symbol, around a given strike and maturity days
 
         Parameters
@@ -1055,48 +1056,33 @@ class AssetFinder(object):
                 (fc_cols.start_date <= desired_min_trading_date_timestamp),
                 (fc_cols.expiration_date > desired_expiration_date_timestamp)
             )
-        ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(2).execute().fetchall()
+        ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(num_expiration_dates).execute().fetchall()
 
         closest_expirations = tuple( [x[0] for x in closest_expirations] )
-
         # now get the closest strikes for those 2 expiration dates
-        sids = list(map(
-            itemgetter('sid'),
-            sa.select(
-                (fc_cols.sid,),
-                fc_cols.expiration_date.in_(closest_expirations)
-            ).where(
-                sa.and_(
-                    (fc_cols.root_symbol == root_symbol),
-                    (fc_cols.option_type == option_type),
-                    (fc_cols.expiration_date == closest_expirations[0])
-                )
-            ).order_by(
-                sa.text('abs(strike - {0})'.format(desired_strike))
-            ).limit(
-                num_contracts_to_return
-            ).execute().fetchall()
-        ))
+        sids = []
         # now let's do the same for the second closest expiration date
-        sids += map(
-            itemgetter('sid'),
-            sa.select(
-                (fc_cols.sid,),
-                fc_cols.expiration_date.in_(closest_expirations)
-            ).where(
-                sa.and_(
-                    (fc_cols.root_symbol == root_symbol),
-                    (fc_cols.option_type == option_type),
-                    (fc_cols.start_date <= desired_min_trading_date_timestamp),
-                    (fc_cols.expiration_date == closest_expirations[1])
-                )
-            ).order_by(
-                sa.text('abs(strike - {0})'.format(desired_strike))
-            ).limit(
-                num_contracts_to_return
-            ).execute().fetchall()
-        )
-
+        for adate in closest_expirations:
+            sids += map(
+                itemgetter('sid'),
+                sa.select(
+                    (fc_cols.sid,),
+                    fc_cols.expiration_date.in_(closest_expirations)
+                ).where(
+                    sa.and_(
+                        (fc_cols.root_symbol == root_symbol),
+                        (fc_cols.option_type == option_type),
+                        (fc_cols.start_date <= desired_min_trading_date_timestamp),
+                        (fc_cols.expiration_date == adate)
+                    )
+                ).order_by(
+                    sa.text('abs(strike - {0})'.format(desired_strike))
+                ).limit(
+                    num_contracts_to_return
+                ).execute().fetchall()
+            )
+        if not sids:
+            print 'NO LINKS! '
         if not sids:
             # Check if root symbol exists.
             count = sa.select((sa.func.count(fc_cols.sid),)).where(
