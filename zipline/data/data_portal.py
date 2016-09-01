@@ -47,6 +47,9 @@ from zipline.errors import (
 
 from minute_bars import OHLC_RATIO
 
+from us_equity_pricing import PLAIN_FIELDS
+
+
 log = Logger('DataPortal')
 
 BASE_FIELDS = frozenset([
@@ -745,16 +748,18 @@ class DataPortal(object):
         future_data = []
         option_data = []
         eq_assets = []
-
+        # pdb.set_trace()
         for asset in assets:
             if isinstance(asset, Future):
                 future_data.append(self._get_history_daily_window_future(
                     asset, days_for_window, end_dt, field_to_use
                 ))
-            elif isinstance(asset, Option):
-                option_data.append(self._get_history_daily_window_option(
-                    asset, days_for_window, end_dt, field_to_use
-                ))
+            # elif isinstance(asset, Option):
+            #     # pdb.set_trace()
+            #     # for now we use the function for equities FIXME GD
+            #     option_data.append(self._get_history_daily_window_equities(
+            #         asset, days_for_window, end_dt, field_to_use
+            #     ))
             else:
                 eq_assets.append(asset)
         eq_data = self._get_history_daily_window_equities(
@@ -765,7 +770,7 @@ class DataPortal(object):
             data = np.concatenate(eq_data, np.array(future_data).T)
         if option_data:
             # TODO: This case appears to be uncovered by testing.
-            data = np.concatenate(data, np.array(option_data).T)
+            data = np.concatenate(eq_data, np.array(option_data).T)
         else:
             data = eq_data
         return pd.DataFrame(
@@ -831,65 +836,56 @@ class DataPortal(object):
 
         return data
 
-    def _get_history_daily_window_option(self, asset, days_for_window,
-                                         end_dt, column):
-        # Since we don't have daily bcolz files for futures (yet), use minute
-        # bars to calculate the daily values.
-        data = []
-        data_groups = []
+    def _get_history_daily_window_options(
+            self, assets, days_for_window, end_dt, field_to_use):
+        ends_at_midnight = end_dt.hour == 0 and end_dt.minute == 0
 
-        # get all the minutes for the days NOT including today
-        for day in days_for_window[:-1]:
-            minutes = self.sessions_in_range.minutes_for_session(day)
-
-            values_for_day = np.zeros(len(minutes), dtype=np.float64)
-
-            for idx, minute in enumerate(minutes):
-                minute_val = self._get_minute_spot_value_option(
-                    asset, column, minute
-                )
-
-                values_for_day[idx] = minute_val
-
-            data_groups.append(values_for_day)
-
-        # get the minutes for today
-        last_day_minutes = pd.date_range(
-            start=self.trading_calendar.open_and_close_for_session(end_dt)[0],
-            end=end_dt,
-            freq="T"
-        )
-
-        values_for_last_day = np.zeros(len(last_day_minutes), dtype=np.float64)
-
-        for idx, minute in enumerate(last_day_minutes):
-            minute_val = self._get_minute_spot_value_option(
-                asset, column, minute
+        if not isinstance(assets, list):
+            assets = [assets]
+        if ends_at_midnight:
+            # two cases where we use daily data for the whole range:
+            # 1) the history window ends at midnight utc.
+            # 2) the last desired day of the window is after the
+            # last trading day, use daily data for the whole range.
+            return self._get_daily_window_for_sids(
+                assets,
+                field_to_use,
+                days_for_window,
+                extra_slot=False
+            )
+        else:
+            # minute mode, requesting '1d'
+            daily_data = self._get_daily_window_for_sids(
+                assets,
+                field_to_use,
+                days_for_window[0:-1]
             )
 
-            values_for_last_day[idx] = minute_val
+            if field_to_use == 'open':
+                minute_value = self._equity_daily_aggregator.opens(
+                    assets, end_dt)
+            elif field_to_use == 'high':
+                minute_value = self._equity_daily_aggregator.highs(
+                    assets, end_dt)
+            elif field_to_use == 'low':
+                minute_value = self._equity_daily_aggregator.lows(
+                    assets, end_dt)
+            elif field_to_use == 'close':
+                minute_value = self._equity_daily_aggregator.closes(
+                    assets, end_dt)
+            elif field_to_use == 'volume':
+                minute_value = self._equity_daily_aggregator.volumes(
+                    assets, end_dt)
 
-        data_groups.append(values_for_last_day)
+            # append the partial day.
+            daily_data[-1] = minute_value
 
-        for group in data_groups:
-            if len(group) == 0:
-                continue
+            return daily_data
 
-            if column == 'volume':
-                data.append(np.sum(group))
-            elif column == 'open':
-                data.append(group[0])
-            elif column == 'close':
-                data.append(group[-1])
-            elif column == 'high':
-                data.append(np.amax(group))
-            elif column == 'low':
-                data.append(np.amin(group))
-
-        return data
 
     def _get_history_daily_window_equities(
             self, assets, days_for_window, end_dt, field_to_use):
+
         ends_at_midnight = end_dt.hour == 0 and end_dt.minute == 0
 
         if ends_at_midnight:
@@ -922,6 +918,10 @@ class DataPortal(object):
                     assets, end_dt)
             elif field_to_use == 'close':
                 minute_value = self._equity_daily_aggregator.closes(
+                    assets, end_dt)
+            elif field_to_use == 'delta':
+                print 'QWEQWBEQWBEQKLWJEOIK'
+                minute_value = self._equity_daily_aggregator.deltas(
                     assets, end_dt)
             elif field_to_use == 'volume':
                 minute_value = self._equity_daily_aggregator.volumes(
@@ -1002,6 +1002,9 @@ class DataPortal(object):
         -------
         A dataframe containing the requested data.
         """
+        import pdb
+        # pdb.set_trace()
+
         if field not in OHLCVP_FIELDS:
             raise ValueError("Invalid field: {0}".format(field))
 
@@ -1241,8 +1244,11 @@ class DataPortal(object):
         nan.
 
         """
+        # pdb.set_trace()
+
         bar_count = len(days_in_window)
         # create an np.array of size bar_count
+        # pdb.set_trace()
         if extra_slot:
             return_array = np.zeros((bar_count + 1, len(assets)))
         else:

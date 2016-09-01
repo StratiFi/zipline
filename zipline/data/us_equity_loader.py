@@ -29,6 +29,7 @@ from zipline.lib.adjustment import Float64Multiply
 from zipline.utils.cache import ExpiringCache
 from zipline.utils.memoize import lazyval
 from zipline.utils.numpy_utils import float64_dtype
+import pdb
 
 
 class SlidingWindow(object):
@@ -250,7 +251,6 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
         size = len(dts)
         asset_windows = {}
         needed_assets = []
-
         for asset in assets:
             try:
                 asset_windows[asset] = self._window_blocks[field].get(
@@ -272,8 +272,9 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
             prefetch_len = len(prefetch_dts)
             array = self._array(prefetch_dts, needed_assets, field)
             view_kwargs = {}
-            if field == 'volume':
-                array = array.astype(float64_dtype)
+            # if field == 'volume':
+            # TODO FIXME GD check this is ok
+            array = array.astype(float64_dtype)
 
             for i, asset in enumerate(needed_assets):
                 if self._adjustments_reader:
@@ -372,6 +373,8 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
         -------
         out : np.ndarray with shape(len(days between start, end), len(assets))
         """
+        # pdb.set_trace()
+
         block = self._ensure_sliding_windows(assets,
                                              dts,
                                              field,

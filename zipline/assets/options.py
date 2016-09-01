@@ -139,8 +139,8 @@ class OptionChain(object):
     def __getitem__(self, key):
         return self._maybe_update_current_chain()[key]
 
-    def __len__(self):
-        return len(self._maybe_update_current_chain())
+    # def __len__(self):
+    #     return len(self._maybe_update_current_chain())
 
     def __iter__(self):
         return iter(self._maybe_update_current_chain())

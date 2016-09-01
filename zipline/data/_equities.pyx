@@ -12,7 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import bcolz
+
+# THIS MUST BE THE SAME AS the one in US_EQUITY_PRICING! FIXME TODO GD
+cdef frozenset PLAIN_FIELDS = frozenset(['volume', 'open_interest'])
+
 cimport cython
 from cpython cimport bool
 
@@ -213,7 +218,10 @@ cpdef _read_bcolz_data(ctable_t table,
                 else:
                     continue
 
-        if column_name in {'open', 'high', 'low', 'close'}:
+        #if column_name in {'open', 'high', 'low', 'close'}:
+        # this is where bcols data is actually loaded AND already corrected by the ohcl factor
+        # beware that this correction also happens at different places, there are several centralized value.. (FIXME)
+        if column_name not in PLAIN_FIELDS:
             where_nan = (outbuf == 0)
             outbuf_as_float = outbuf.astype(float64) * .001
             outbuf_as_float[where_nan] = NAN

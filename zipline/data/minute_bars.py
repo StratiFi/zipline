@@ -33,6 +33,8 @@ from zipline.gens.sim_engine import NANOS_IN_MINUTE
 from zipline.utils.cli import maybe_show_progress
 from zipline.utils.memoize import lazyval
 
+import pdb
+
 US_EQUITIES_MINUTES_PER_DAY = 390
 
 DEFAULT_EXPECTEDLEN = US_EQUITIES_MINUTES_PER_DAY * 252 * 15
@@ -994,6 +996,8 @@ class BcolzMinuteBarReader(object):
             (minutes in range, sids) with a dtype of float64, containing the
             values for the respective field over start and end dt range.
         """
+        pdb.set_trace()
+        print 'IN LOAD RAW ARRAYS! '
         start_idx = self._find_position_of_minute(start_dt)
         end_idx = self._find_position_of_minute(end_dt)
 

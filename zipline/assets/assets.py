@@ -1009,6 +1009,94 @@ class AssetFinder(object):
         contracts = self.retrieve_options_contracts(sids)
         return [contracts[sid] for sid in sids]
 
+    # def lookup_option_chain(self, root_symbol, current_date, option_type, underlying_price,
+    #                         desired_minimum_expiration_date, num_contracts_to_return, num_expiration_dates=2):
+    #     """ Return an extract of the options chain for a given root symbol, around a given maturity date,
+    #     sorted by distance from current underlying price, if available
+    #
+    #     Parameters
+    #     ----------
+    #     root_symbol : str
+    #         Root symbol of the desired option.
+    #
+    #     current_date : str
+    #         minimum t_date
+    #
+    #     underlying_price : float
+    #         current underlying price at current_date. We use it to order by moneyness
+    #
+    #     desired_minimum_expiration_date : str
+    #         minimum expiration date around which the search is performed
+    #
+    #     num_contracts_to_return : int
+    #         we limit the number of options returned to this number
+    #
+    #     num_expiration_dates : int
+    #         number of different expiration dates considered
+    #
+    #     Returns
+    #     -------
+    #     list
+    #         A list of Option objects, the chain for the given
+    #         parameters.
+    #
+    #     Raises
+    #     ------
+    #     RootSymbolNotFound
+    #         Raised when a Option chain could not be found for the given
+    #         root symbol.
+    #     """
+    #     option_type = sa.text('\'' + option_type + '\'')
+    #     fc_cols = self.options_contracts.c
+    #     desired_expiration_date_timestamp = pd.Timestamp(desired_minimum_expiration_date).value
+    #     desired_min_trading_date_timestamp = pd.Timestamp(current_date).value
+    #
+    #     # first get the 2 closest expiration dates
+    #     closest_expirations = sa.select([fc_cols.expiration_date]).where(
+    #         sa.and_(
+    #             (fc_cols.root_symbol == root_symbol),
+    #             (fc_cols.option_type == option_type),
+    #             (fc_cols.start_date <= desired_min_trading_date_timestamp),
+    #             (fc_cols.expiration_date > desired_expiration_date_timestamp)
+    #         )
+    #     ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(num_expiration_dates).execute().fetchall()
+    #
+    #     closest_expirations = tuple( [x[0] for x in closest_expirations] )
+    #     # now get the closest strikes for those 2 expiration dates
+    #     sids = []
+    #     # now let's do the same for the second closest expiration date
+    #     for adate in closest_expirations:
+    #         sids += map(
+    #             itemgetter('sid'),
+    #             sa.select(
+    #                 (fc_cols.sid,),
+    #                 fc_cols.expiration_date.in_(closest_expirations)
+    #             ).where(
+    #                 sa.and_(
+    #                     (fc_cols.root_symbol == root_symbol),
+    #                     (fc_cols.option_type == option_type),
+    #                     (fc_cols.start_date <= desired_min_trading_date_timestamp),
+    #                     (fc_cols.expiration_date == adate)
+    #                 )
+    #             ).order_by(
+    #                 sa.text('abs(strike - {0})'.format(underlying_price))
+    #             ).limit(
+    #                 num_contracts_to_return
+    #             ).execute().fetchall()
+    #         )
+    #     if not sids:
+    #         print 'NO LINKS! '
+    #     if not sids:
+    #         # Check if root symbol exists.
+    #         count = sa.select((sa.func.count(fc_cols.sid),)).where(
+    #             fc_cols.root_symbol == root_symbol,
+    #         ).scalar()
+    #         if count == 0:
+    #             raise RootSymbolNotFound(root_symbol=root_symbol)
+    #
+    #     contracts = self.retrieve_options_contracts(sids)
+    #     return [contracts[sid] for sid in sids]
+
 
     def lookup_option_links(self, root_symbol, current_date, option_type, desired_strike,
                             desired_minimum_expiration_date, num_contracts_to_return, num_expiration_dates=2):

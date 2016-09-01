@@ -351,6 +351,69 @@ class DailyHistoryAggregator(object):
                     continue
         return np.array(closes)
 
+    def deltas(self, assets, dt):
+        """
+        The delta field's aggregation returns the latest delta at the given dt.
+        If the close for the given dt is `nan`, a nan is returned.
+        If there has been no data on or before the `dt` the close is `nan`.
+
+        Returns
+        -------
+        np.array with dtype=float64, in order of assets parameter.
+        """
+        # import pdb
+        market_open, prev_dt, dt_value, entries = self._prelude(dt, 'delta')
+        print 'IN DELTASS'
+        # pdb.set_trace()
+        deltas = []
+        session_label = self._trading_calendar.minute_to_session_label(dt)
+
+        for asset in assets:
+            if not asset.is_alive_for_session(session_label):
+                deltas.append(np.NaN)
+                continue
+
+            if prev_dt is None:
+                val = self._minute_reader.get_value(asset, dt, 'delta')
+                entries[asset] = (dt_value, val)
+                deltas.append(val)
+                continue
+            else:
+                try:
+                    last_visited_dt, last_close = entries[asset]
+                    if last_visited_dt == dt_value:
+                        deltas.append(last_close)
+                        continue
+                    # elif last_visited_dt == prev_dt:
+                    #     val = self._minute_reader.get_value(
+                    #         asset, dt, 'delta')
+                    #     if pd.isnull(val):
+                    #         val = last_close
+                    #     entries[asset] = (dt_value, val)
+                    #     deltas.append(val)
+                    #     continue
+                    else:
+                        val = self._minute_reader.get_value(
+                            asset, dt, 'delta')
+                        if pd.isnull(val):
+                            val = self.deltas(
+                                [asset],
+                                pd.Timestamp(prev_dt, tz='UTC'))[0]
+                        entries[asset] = (dt_value, val)
+                        deltas.append(val)
+                        continue
+                except KeyError:
+                    # val = self._minute_reader.get_value(
+                    #     asset, dt, 'delta')
+                    # if pd.isnull(val):
+                    #     val = self.deltas([asset],
+                    #                       pd.Timestamp(prev_dt, tz='UTC'))[0]
+                    entries[asset] = (dt_value, np.NaN)
+                    deltas.append(np.NaN)
+                    continue
+        return np.array(deltas)
+
+
     def volumes(self, assets, dt):
         """
         The volume field's aggregation returns the sum of all volumes

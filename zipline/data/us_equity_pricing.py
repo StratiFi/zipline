@@ -69,7 +69,6 @@ from minute_bars import OHLC_RATIO
 import numpy
 import pdb
 
-
 logger = logbook.Logger('UsEquityPricing')
 
 OHLC = frozenset(['open', 'high', 'low', 'close'])
@@ -678,6 +677,9 @@ class BcolzDailyBarReader(DailyBarReader):
         )
 
     def load_raw_arrays(self, columns, start_date, end_date, assets):
+        # GD this is what happens at some point when data.history is called
+        # pdb.set_trace()
+
         # Assumes that the given dates are actually in calendar.
         start_idx = self.sessions.get_loc(start_date)
         end_idx = self.sessions.get_loc(end_date)
@@ -713,7 +715,6 @@ class BcolzDailyBarReader(DailyBarReader):
             Full read array of the carray in the daily_bar_table with the
             given colname.
         """
-        # print 'DUDE!'
         try:
             col = self._spot_cols[colname]
         except KeyError:
