@@ -17,6 +17,7 @@ import bcolz
 
 # THIS MUST BE THE SAME AS the one in US_EQUITY_PRICING! FIXME TODO GD
 cdef frozenset PLAIN_FIELDS = frozenset(['volume', 'open_interest'])
+cdef frozenset GREEKS_FIELDS = frozenset(['delta', 'gamma', 'theta', 'rho', 'vega', 'iv'])
 
 cimport cython
 from cpython cimport bool
@@ -26,6 +27,7 @@ from numpy import (
     float64,
     intp,
     uint32,
+    int32,
     zeros,
 )
 from numpy cimport (
@@ -33,6 +35,7 @@ from numpy cimport (
     intp_t,
     ndarray,
     uint32_t,
+    int32_t,
     uint8_t,
 )
 from numpy.math cimport NAN
@@ -174,6 +177,7 @@ cpdef _read_bcolz_data(ctable_t table,
         carray_t carray
         ndarray[dtype=uint32_t, ndim=1] raw_data
         ndarray[dtype=uint32_t, ndim=2] outbuf
+        ndarray[dtype=int32_t, ndim=2] outbuf_as_int
         ndarray[dtype=uint8_t, ndim=2, cast=True] where_nan
         ndarray[dtype=float64_t, ndim=2] outbuf_as_float
         intp_t asset
@@ -190,6 +194,7 @@ cpdef _read_bcolz_data(ctable_t table,
         raise ValueError("Incompatible index arrays.")
 
     for column_name in columns:
+        outbuf_as_int = zeros(shape=shape, dtype=int32)
         outbuf = zeros(shape=shape, dtype=uint32)
         if read_all:
             raw_data = table[column_name][:]
@@ -199,8 +204,12 @@ cpdef _read_bcolz_data(ctable_t table,
                 last_row = last_rows[asset]
                 offset = offsets[asset]
                 if first_row <= last_row:
-                    outbuf[offset:offset + (last_row + 1 - first_row), asset] =\
-                        raw_data[first_row:last_row + 1]
+                    if column_name not in GREEKS_FIELDS:
+                        outbuf[offset:offset + (last_row + 1 - first_row), asset] =\
+                            raw_data[first_row:last_row + 1]
+                    else:
+                        outbuf_as_int[offset:offset + (last_row + 1 - first_row), asset] =\
+                            raw_data[first_row:last_row + 1]
                 else:
                     continue
         else:
@@ -213,8 +222,12 @@ cpdef _read_bcolz_data(ctable_t table,
                 out_start = offset
                 out_end = (last_row - first_row) + offset + 1
                 if first_row <= last_row:
-                    outbuf[offset:offset + (last_row + 1 - first_row), asset] =\
-                        carray[first_row:last_row + 1]
+                    if column_name not in GREEKS_FIELDS:
+                        outbuf[offset:offset + (last_row + 1 - first_row), asset] =\
+                            carray[first_row:last_row + 1]
+                    else:
+                        outbuf_as_int[offset:offset + (last_row + 1 - first_row), asset] =\
+                            carray[first_row:last_row + 1]
                 else:
                     continue
 
@@ -222,10 +235,16 @@ cpdef _read_bcolz_data(ctable_t table,
         # this is where bcols data is actually loaded AND already corrected by the ohcl factor
         # beware that this correction also happens at different places, there are several centralized value.. (FIXME)
         if column_name not in PLAIN_FIELDS:
-            where_nan = (outbuf == 0)
-            outbuf_as_float = outbuf.astype(float64) * .001
-            outbuf_as_float[where_nan] = NAN
-            results.append(outbuf_as_float)
+            if column_name not in GREEKS_FIELDS:
+                where_nan = (outbuf == 0)
+                outbuf_as_float = outbuf.astype(float64) * .001
+                outbuf_as_float[where_nan] = NAN
+                results.append(outbuf_as_float)
+            else:
+                where_nan = (outbuf_as_int == 0)
+                outbuf_as_float = outbuf_as_int.astype(float64) * .001
+                outbuf_as_float[where_nan] = NAN
+                results.append(outbuf_as_float)
         else:
             results.append(outbuf)
     return results

@@ -196,8 +196,9 @@ def to_ctable(raw_data, invalid_data_behavior):
     # case of options. Ideally, make separate functions / switch cases
     try:
         processed['open_interest'] = raw_data.open_interest.astype('uint32')
-        processed['bid'] = (raw_data.bid * OHLC_RATIO).astype(numpy.int32)
-        processed['ask'] = (raw_data.ask * OHLC_RATIO).astype(numpy.int32)
+        # FIXME bis and ask should be uint for consistency
+        processed['bid'] = (raw_data.bid * OHLC_RATIO).astype(numpy.uint32)
+        processed['ask'] = (raw_data.ask * OHLC_RATIO).astype(numpy.uint32)
         processed['delta'] = (raw_data.delta * OHLC_RATIO).astype(numpy.int32)
         processed['gamma'] = (raw_data.gamma * OHLC_RATIO).astype(numpy.int32)
         processed['theta'] = (raw_data.theta * OHLC_RATIO).astype(numpy.int32)
@@ -678,7 +679,6 @@ class BcolzDailyBarReader(DailyBarReader):
 
     def load_raw_arrays(self, columns, start_date, end_date, assets):
         # GD this is what happens at some point when data.history is called
-        # pdb.set_trace()
 
         # Assumes that the given dates are actually in calendar.
         start_idx = self.sessions.get_loc(start_date)
@@ -689,15 +689,19 @@ class BcolzDailyBarReader(DailyBarReader):
             assets,
         )
         read_all = len(assets) > self._read_all_threshold
-        return _read_bcolz_data(
-            self._table,
-            (end_idx - start_idx + 1, len(assets)),
-            list(columns),
-            first_rows,
-            last_rows,
-            offsets,
-            read_all,
-        )
+        # pdb.set_trace()
+        # FIXME clean that TMP FIX!!!! TODO GD REMOVE !!
+        foo = _read_bcolz_data(self._table, (end_idx - start_idx + 1, len(assets)), ['delta'], first_rows, last_rows, offsets, read_all, )
+        return foo
+        # return _read_bcolz_data(
+        #     self._table,
+        #     (end_idx - start_idx + 1, len(assets)),
+        #     list(columns),
+        #     first_rows,
+        #     last_rows,
+        #     offsets,
+        #     read_all,
+        # )
 
     def _spot_col(self, colname):
         """
