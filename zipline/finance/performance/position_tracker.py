@@ -412,8 +412,6 @@ class PositionTracker(object):
             amounts.append(pos.amount)
             last_sale_prices.append(pos.last_sale_price)
         # print 'IN STATS ', amounts, last_sale_prices, len(self._position_value_multipliers)
-        if len(self._position_value_multipliers) > len (amounts):
-            # print 'MISMATCH ', self._position_value_multipliers
 
         position_values = calc_position_values(
             amounts,
