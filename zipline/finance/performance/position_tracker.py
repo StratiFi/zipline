@@ -327,7 +327,6 @@ class PositionTracker(object):
         return net_cash_payment
 
     def maybe_create_close_position_transaction(self, asset, dt, data_portal):
-        print 'MAYBE!'
         if not self.positions.get(asset):
             return None
 
@@ -338,7 +337,6 @@ class PositionTracker(object):
         # Get the last traded price if price is no longer available
         if isnan(price):
             price = self.positions.get(asset).last_sale_price
-        print 'ti PRICE', price
         txn = Transaction(
             sid=asset,
             amount=(-1 * amount),
@@ -415,7 +413,7 @@ class PositionTracker(object):
             last_sale_prices.append(pos.last_sale_price)
         # print 'IN STATS ', amounts, last_sale_prices, len(self._position_value_multipliers)
         if len(self._position_value_multipliers) > len (amounts):
-            print 'MISMATCH ', self._position_value_multipliers
+            # print 'MISMATCH ', self._position_value_multipliers
 
         position_values = calc_position_values(
             amounts,

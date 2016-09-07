@@ -363,7 +363,6 @@ class DailyHistoryAggregator(object):
         """
         # import pdb
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'delta')
-        print 'IN DELTASS'
         # pdb.set_trace()
         deltas = []
         session_label = self._trading_calendar.minute_to_session_label(dt)
