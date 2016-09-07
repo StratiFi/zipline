@@ -691,17 +691,17 @@ class BcolzDailyBarReader(DailyBarReader):
         read_all = len(assets) > self._read_all_threshold
         # pdb.set_trace()
         # FIXME clean that TMP FIX!!!! TODO GD REMOVE !!
-        foo = _read_bcolz_data(self._table, (end_idx - start_idx + 1, len(assets)), ['delta'], first_rows, last_rows, offsets, read_all, )
-        return foo
-        # return _read_bcolz_data(
-        #     self._table,
-        #     (end_idx - start_idx + 1, len(assets)),
-        #     list(columns),
-        #     first_rows,
-        #     last_rows,
-        #     offsets,
-        #     read_all,
-        # )
+        # foo = _read_bcolz_data(self._table, (end_idx - start_idx + 1, len(assets)), ['delta'], first_rows, last_rows, offsets, read_all, )
+        # return foo
+        return _read_bcolz_data(
+            self._table,
+            (end_idx - start_idx + 1, len(assets)),
+            list(columns),
+            first_rows,
+            last_rows,
+            offsets,
+            read_all,
+        )
 
     def _spot_col(self, colname):
         """
