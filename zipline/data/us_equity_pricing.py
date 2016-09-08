@@ -1380,8 +1380,6 @@ class SQLiteAdjustmentReader(object):
                     row[1], Timestamp(row[2], unit='s', tz='UTC'))
                 divs.append(div)
         c.close()
-        if divs:
-            print 'DIVS: ', divs
         return divs
 
     def get_stock_dividends_with_ex_date(self, assets, date, asset_finder):
