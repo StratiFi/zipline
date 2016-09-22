@@ -8,6 +8,7 @@ import requests
 from zipline.utils.cli import maybe_show_progress
 from .core import register
 
+import pdb
 
 def _cachpath(symbol, type_):
     return '-'.join((symbol.replace(os.path.sep, '_'), type_))
@@ -172,9 +173,12 @@ def yahoo_equities(symbols, start=None, end=None):
         dividends['declared_date'] = pd.NaT
         #dividends['pay_date'] = pd.NaT
         # GD for the yahoo bundle we force-set the pay_date to be 12 days after ex_date (accurate for SPY)
-        print 'HACK GD -- !!!'
-        dividends['pay_date'] = dividends['ex_date'] + 86400 * 12
-
+        print 'TMP HACK GD -- !!!'
+        # pdb.set_trace()
+        try:
+            dividends['pay_date'] = dividends['ex_date'] + 86400 * 12
+        except TypeError:
+            dividends['pay_date'] = dividends['ex_date'] + pd.Timedelta('12 days')
         adjustment_writer.write(splits=splits, dividends=dividends)
 
     return ingest

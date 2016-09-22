@@ -19,6 +19,7 @@ import math
 from six import with_metaclass
 
 from zipline.finance.transaction import create_transaction
+import zipline
 
 import numpy as np
 
@@ -235,3 +236,19 @@ class NoSlippage(SlippageModel):
            price,
            order.amount
        )
+
+
+# GD FIXME tmp hack --> REMOVE IN FINAL VERSION
+class InstantFill(SlippageModel):
+    def __init__(self, context):
+        self.context = context
+        pass
+
+    def process_order(self, data, order):
+        trade_price = None
+        if order.asset == zipline.api.symbol(self.context.hedge_sp):
+            trade_price = self.context.temp_spy_px
+        if order.asset == self.context.current_position_vix_future:
+            trade_price = self.context.temp_vix_future_px
+
+        return trade_price, order.amount

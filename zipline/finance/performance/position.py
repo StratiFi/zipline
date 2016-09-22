@@ -56,6 +56,7 @@ class Position(object):
         Register the number of shares we held at this dividend's ex date so
         that we can pay out the correct amount on the dividend's pay date.
         """
+        # print 'DIVIDENDS GD ZZZZ', self.amount, dividend.amount, self.sid
         return {
             'amount': self.amount * dividend.amount
         }

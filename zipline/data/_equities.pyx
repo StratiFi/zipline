@@ -16,7 +16,7 @@
 import bcolz
 
 # THIS MUST BE THE SAME AS the one in US_EQUITY_PRICING! FIXME TODO GD
-cdef frozenset PLAIN_FIELDS = frozenset(['volume', 'open_interest'])
+cdef frozenset PLAIN_FIELDS = frozenset(['volume', 'open_interest', 'day'])
 cdef frozenset GREEKS_FIELDS = frozenset(['delta', 'gamma', 'theta', 'rho', 'vega', 'iv'])
 
 cimport cython

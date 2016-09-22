@@ -64,7 +64,7 @@ OHLCV_FIELDS = frozenset([
 
 OHLCVP_FIELDS = frozenset([
     "open", "high", "low", "close", "bid", "ask", "open_interest", "iv", "delta", "gamma", "theta", "vega", "rho",
-    "volume", "price"
+    "volume", "price", "day"
 ])
 
 HISTORY_FREQUENCIES = set(["1m", "1d"])
@@ -1244,6 +1244,8 @@ class DataPortal(object):
         nan.
 
         """
+
+        # GD
         # pdb.set_trace()
 
         bar_count = len(days_in_window)
@@ -1254,7 +1256,7 @@ class DataPortal(object):
         else:
             return_array = np.zeros((bar_count, len(assets)))
 
-        if field != "volume":
+        if field != "volume" and field != "day":
             # volumes default to 0, so we don't need to put NaNs in the array
             return_array[:] = np.NAN
 

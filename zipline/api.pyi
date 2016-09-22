@@ -739,3 +739,26 @@ def symbols(*args):
     :func:`zipline.api.set_symbol_lookup_date`
     """
 
+
+def option_symbol(option_symbol_str):
+    """Lookup an Option by its option_ticker symbol.
+
+    Parameters
+    ----------
+    option_symbol_str : str
+        The option_ticker symbol for the option to lookup.
+
+    Returns
+    -------
+    option : Option
+        The option that held the option_ticker symbol on the current
+        symbol lookup date.
+
+    Raises
+    ------
+    SymbolNotFound
+        Raised when the symbols was not held on the current lookup date.
+
+    See Also
+    --------
+    """

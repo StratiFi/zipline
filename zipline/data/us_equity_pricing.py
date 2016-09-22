@@ -84,7 +84,7 @@ US_EQUITY_AND_OPTION_PRICING_BCOLZ_COLUMNS = (
     'volume', 'day', 'id'
 )
 US_OPTION_PRICING_BCOLZ_COLUMNS = (
-    'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho',
+    'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho', 'day'
 )
 
 SQLITE_ADJUSTMENT_COLUMN_DTYPES = {

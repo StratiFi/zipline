@@ -1097,7 +1097,6 @@ class AssetFinder(object):
     #     contracts = self.retrieve_options_contracts(sids)
     #     return [contracts[sid] for sid in sids]
 
-
     def lookup_option_links(self, root_symbol, current_date, option_type, desired_strike,
                             desired_minimum_expiration_date, num_contracts_to_return, num_expiration_dates=2):
         """ Return an extract of the options chain for a given root symbol, around a given strike and maturity days

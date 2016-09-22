@@ -84,7 +84,7 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
         Reader for adjustment data.
     """
     FIELDS = ('open', 'high', 'low', 'close', 'bid', 'ask', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega',
-              'rho', 'volume')
+              'rho', 'volume', 'day')
 
     def __init__(self, trading_calendar, reader, adjustment_reader,
                  sid_cache_size=1000):
@@ -147,7 +147,7 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
         start = normalize_date(dts[0])
         end = normalize_date(dts[-1])
         adjs = {}
-        if field != 'volume':
+        if field != 'volume' and field != 'day' and field not in ['delta', 'gamma','vega','theta','rho','open_interest','iv']:
             mergers = self._adjustments_reader.get_adjustments_for_sid(
                 'mergers', sid)
             for m in mergers:
@@ -258,6 +258,10 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
             except KeyError:
                 needed_assets.append(asset)
 
+        print '_ensure_sliding_windows'
+        # GD
+        # pdb.set_trace()
+
         if needed_assets:
             start = dts[0]
 
@@ -275,7 +279,7 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
             # if field == 'volume':
             # TODO FIXME GD check this is ok
             array = array.astype(float64_dtype)
-
+            # pdb.set_trace()
             for i, asset in enumerate(needed_assets):
                 if self._adjustments_reader:
                     adjs = self._get_adjustments_in_range(
@@ -373,12 +377,12 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
         -------
         out : np.ndarray with shape(len(days between start, end), len(assets))
         """
-        # pdb.set_trace()
 
         block = self._ensure_sliding_windows(assets,
                                              dts,
                                              field,
                                              is_perspective_after)
+
         end_ix = self._calendar.get_loc(dts[-1])
         return hstack([window.get(end_ix) for window in block])
 
