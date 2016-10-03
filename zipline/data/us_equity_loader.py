@@ -258,7 +258,6 @@ class USEquityHistoryLoader(with_metaclass(ABCMeta)):
             except KeyError:
                 needed_assets.append(asset)
 
-        print '_ensure_sliding_windows'
         # GD
         # pdb.set_trace()
 
