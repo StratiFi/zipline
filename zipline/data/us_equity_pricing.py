@@ -69,6 +69,8 @@ from minute_bars import OHLC_RATIO
 import numpy
 import pdb
 
+import pudb
+
 logger = logbook.Logger('UsEquityPricing')
 
 OHLC = frozenset(['open', 'high', 'low', 'close'])
@@ -346,7 +348,6 @@ class BcolzDailyBarWriter(object):
 
         `iterator` should be an iterator yielding pairs of (asset, ctable).
         """
-        # pdb.set_trace()
         total_rows = 0
         first_row = {}
         last_row = {}
@@ -770,8 +771,10 @@ class BcolzDailyBarReader(DailyBarReader):
         except:
             raise NoDataOnDate("day={0} is outside of calendar={1}".format(
                 day, self.sessions))
-
+        # try:
         offset = day_loc - self._calendar_offsets[sid]
+        # except KeyError:
+        #     pdb.set_trace()
         if offset < 0:
             raise NoDataOnDate(
                 "No data on or before day={0} for sid={1}".format(

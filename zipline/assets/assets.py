@@ -1141,7 +1141,7 @@ class AssetFinder(object):
                 (fc_cols.root_symbol == root_symbol),
                 (fc_cols.option_type == option_type),
                 (fc_cols.start_date <= desired_min_trading_date_timestamp),
-                (fc_cols.expiration_date > desired_expiration_date_timestamp)
+                (fc_cols.expiration_date >= desired_expiration_date_timestamp)
             )
         ).order_by(sa.text('(expiration_date - {0})'.format(desired_expiration_date_timestamp))).distinct().limit(num_expiration_dates).execute().fetchall()
 
@@ -1168,8 +1168,6 @@ class AssetFinder(object):
                     num_contracts_to_return
                 ).execute().fetchall()
             )
-        if not sids:
-            print 'NO LINKS! '
         if not sids:
             # Check if root symbol exists.
             count = sa.select((sa.func.count(fc_cols.sid),)).where(
