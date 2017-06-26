@@ -250,6 +250,9 @@ def ensure_benchmark_data(symbol, first_date, last_date, now, trading_day):
         data.to_csv(path)
     except (OSError, IOError, HTTPError):
         logger.exception('failed to cache the new benchmark returns')
+        # instantiates an empty series so that other functions work
+        data = pd.Series(index=pd.date_range(start=pd.datetime(2017, 6, 24), periods=1, freq='A', tz='UTC'))
+
     if not has_data_for_dates(data, first_date, last_date):
         logger.warn("Still don't have expected data after redownload!")
     return data
