@@ -1100,11 +1100,11 @@ class SQLiteAdjustmentWriter(object):
                     # only assign effective_date when data is found
                     effective_dates[i] = ex_date
             except NoDataOnDate:
-                logger.warn("Couldn't compute ratio for dividend %s" % {
-                    'sid': sid,
-                    'ex_date': ex_date,
-                    'amount': amount,
-                })
+#                 logger.warn("Couldn't compute ratio for dividend %s" % {
+#                     'sid': sid,
+#                     'ex_date': ex_date,
+#                     'amount': amount,
+#                 })
                 continue
 
         # Create a mask to filter out indices in the effective_date, sid, and
